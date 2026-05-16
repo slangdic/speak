@@ -8,23 +8,28 @@
 <title>Thinking Skills</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <style>
 :root {
   --base: 16px;
-  --bg: #f7f8fa;
+  --bg: #f5efe6;
+  --bg-soft: #ede5d5;
   --card: #ffffff;
-  --border: #e3e6eb;
-  --text: #1a1d22;
-  --muted: #6b7280;
-  --primary: #2563eb;
-  --primary-hover: #1d4ed8;
-  --accent: #10b981;
-  --danger: #ef4444;
-  --warn: #f59e0b;
+  --border: #e3dccf;
+  --text: #3d4a3d;
+  --text-soft: #6b7568;
+  --muted: #9aa097;
+  --sage: #a8c4a2;
+  --sage-dark: #8aab83;
+  --sage-soft: #d4e3ce;
+  --cream: #f0e6d2;
+  --warm: #e8d9b8;
+  --yellow-soft: #faf3dc;
+  --danger: #d68a8a;
+  --danger-dark: #b56e6e;
 }
 * { box-sizing: border-box; }
 html, body {
@@ -33,7 +38,7 @@ html, body {
   background: var(--bg);
   color: var(--text);
   font-size: var(--base);
-  line-height: 1.6;
+  line-height: 1.65;
 }
 button { font-family: inherit; cursor: pointer; }
 input, select, textarea { font-family: inherit; font-size: 1rem; }
@@ -41,60 +46,74 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
 /* Header */
 .app-header {
   position: sticky; top: 0; z-index: 100;
-  background: var(--card);
-  border-bottom: 1px solid var(--border);
-  padding: 12px 16px;
+  background: var(--bg);
+  padding: 14px 18px;
   display: flex; align-items: center; justify-content: space-between;
 }
-.app-title { font-size: 1.1rem; font-weight: 700; margin: 0; }
+.app-title { 
+  font-size: 1.15rem; font-weight: 700; margin: 0; 
+  color: var(--text); letter-spacing: 0.5px;
+}
 .hamburger-btn {
-  background: none; border: 1px solid var(--border);
-  padding: 6px 12px; border-radius: 6px;
-  font-size: 0.9rem;
+  background: var(--card); border: 1px solid var(--border);
+  padding: 8px 14px; border-radius: 18px;
+  font-size: 0.88rem; color: var(--text-soft);
 }
 
 /* Container */
 .app-container {
   max-width: 800px; margin: 0 auto;
-  padding: 16px;
+  padding: 8px 16px 80px;
 }
 
 /* Cards */
 .card {
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 16px;
-  margin-bottom: 16px;
+  border-radius: 16px;
+  padding: 18px;
+  margin-bottom: 14px;
 }
 
 /* Input Card */
 .input-card .url-input {
   width: 100%;
-  padding: 10px 12px;
+  padding: 12px 14px;
   border: 1px solid var(--border);
-  border-radius: 6px;
-  margin-bottom: 10px;
+  border-radius: 12px;
+  margin-bottom: 12px;
+  background: var(--bg-soft);
+  color: var(--text);
 }
+.url-input:focus { outline: none; border-color: var(--sage); background: white; }
 .input-row { display: flex; gap: 8px; flex-wrap: wrap; }
 .btn-primary {
-  background: var(--primary); color: white;
-  border: none; padding: 10px 18px;
-  border-radius: 6px; font-weight: 500;
+  background: var(--sage); color: white;
+  border: none; padding: 11px 20px;
+  border-radius: 20px; font-weight: 600;
+  font-size: 0.92rem;
 }
-.btn-primary:hover { background: var(--primary-hover); }
+.btn-primary:hover { background: var(--sage-dark); }
 .btn-secondary {
-  background: white; color: var(--text);
+  background: var(--card); color: var(--text);
   border: 1px solid var(--border);
-  padding: 10px 14px; border-radius: 6px;
+  padding: 11px 18px; border-radius: 20px;
+  font-size: 0.92rem;
 }
-.btn-secondary:hover { background: var(--bg); }
+.btn-secondary:hover { background: var(--bg-soft); }
+.btn-save {
+  background: var(--warm); color: var(--text);
+  border: none; padding: 11px 18px;
+  border-radius: 20px; font-weight: 600;
+  font-size: 0.92rem;
+}
+.btn-save:hover { background: #ddc89e; }
 .file-label {
   display: inline-block;
-  background: white; color: var(--text);
+  background: var(--card); color: var(--text);
   border: 1px solid var(--border);
-  padding: 10px 14px; border-radius: 6px;
-  cursor: pointer;
+  padding: 11px 18px; border-radius: 20px;
+  cursor: pointer; font-size: 0.92rem;
 }
 .file-label input { display: none; }
 
@@ -102,21 +121,21 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
 .kr-input-card { display: none; }
 .kr-row { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
 .rec-bar-wrap {
-  width: 100%; height: 6px;
-  background: var(--border); border-radius: 3px;
+  width: 100%; height: 8px;
+  background: var(--bg-soft); border-radius: 4px;
   overflow: hidden; margin: 8px 0;
 }
 .rec-bar { height: 100%; width: 0%; background: var(--danger); transition: width 0.2s; }
-.rec-timer { font-family: monospace; color: var(--muted); }
+.rec-timer { font-family: monospace; color: var(--text-soft); }
 .kr-result-block {
-  background: var(--bg);
-  border-radius: 8px;
-  padding: 12px;
+  background: var(--bg-soft);
+  border-radius: 12px;
+  padding: 14px;
   margin-top: 10px;
 }
 .kr-label {
-  font-size: 0.85rem; color: var(--muted);
-  font-weight: 600; margin-bottom: 4px;
+  font-size: 0.82rem; color: var(--text-soft);
+  font-weight: 600; margin-bottom: 6px;
 }
 .kr-text { word-break: keep-all; }
 
@@ -124,70 +143,113 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
 .progress-card { display: none; }
 .progress-bar-wrap {
   width: 100%; height: 8px;
-  background: var(--border); border-radius: 4px;
+  background: var(--bg-soft); border-radius: 4px;
   overflow: hidden;
 }
 .progress-bar {
   height: 100%; width: 0%;
-  background: var(--primary);
+  background: var(--sage);
   transition: width 0.3s;
 }
-.progress-text { margin-top: 8px; font-size: 0.9rem; color: var(--muted); }
+.progress-text { margin-top: 8px; font-size: 0.88rem; color: var(--text-soft); }
 
 /* Sentence Card */
 .sentence-card {
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 14px;
+  border-radius: 14px;
+  padding: 16px;
   margin-bottom: 12px;
+}
+.sentence-header {
+  display: flex; align-items: baseline; gap: 8px;
+  margin-bottom: 8px;
+}
+.sentence-num {
+  font-size: 0.85rem; font-weight: 700;
+  color: var(--sage-dark);
+  background: var(--sage-soft);
+  padding: 2px 10px;
+  border-radius: 12px;
+  flex-shrink: 0;
 }
 .sentence-text {
   font-size: 1.05rem;
-  line-height: 1.7;
+  line-height: 1.75;
   word-break: keep-all;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 .sentence-controls {
   display: flex; gap: 6px; flex-wrap: wrap;
 }
 .btn-ctrl {
-  background: white;
-  border: 1px solid var(--border);
-  padding: 6px 12px;
-  border-radius: 5px;
+  background: var(--bg-soft);
+  border: none;
+  padding: 7px 14px;
+  border-radius: 16px;
   font-size: 0.85rem;
+  color: var(--text);
 }
-.btn-ctrl:hover { background: var(--bg); }
-.btn-ctrl[data-state="stop"] { background: var(--danger); color: white; border-color: var(--danger); }
+.btn-ctrl:hover { background: var(--sage-soft); }
+.btn-ctrl[data-state="stop"] {
+  background: var(--danger); color: white;
+}
+.btn-ctrl[data-state="stop"]:hover { background: var(--danger-dark); }
 .sentence-slot { margin-top: 10px; }
 
 .translation-box, .hard-box, .follow-box {
-  background: var(--bg);
-  border-radius: 6px;
-  padding: 10px;
-  margin-top: 8px;
+  background: var(--bg-soft);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-top: 10px;
 }
-.trans-row { margin: 6px 0; word-break: keep-all; }
+.trans-row {
+  margin: 8px 0;
+  word-break: keep-all;
+  display: flex; align-items: baseline; gap: 8px;
+  flex-wrap: wrap;
+}
 .trans-label {
   display: inline-block;
-  font-size: 0.75rem; font-weight: 600;
-  color: var(--muted);
+  font-size: 0.75rem; font-weight: 700;
+  color: var(--sage-dark);
   background: white;
-  padding: 2px 8px; border-radius: 10px;
-  margin-right: 6px;
+  padding: 2px 10px; border-radius: 10px;
+  flex-shrink: 0;
 }
-.hard-item { padding: 6px 0; border-bottom: 1px solid var(--border); }
+.hard-item {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
 .hard-item:last-child { border-bottom: none; }
 .hard-type {
-  font-weight: 600; color: var(--primary);
-  margin-right: 6px;
+  display: inline-block;
+  font-weight: 700;
+  color: white;
+  background: var(--sage);
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-size: 0.8rem;
+  margin-right: 8px;
+  margin-bottom: 4px;
 }
-.fr-score { font-weight: 700; color: var(--primary); margin-bottom: 6px; }
-.fr-spoken { color: var(--muted); font-size: 0.9rem; margin-bottom: 6px; }
-.fr-ok { color: var(--accent); font-weight: 500; }
-.fr-no { color: var(--danger); text-decoration: line-through; }
-.follow-err { color: var(--danger); }
+.hard-target {
+  font-weight: 700;
+  color: var(--sage-dark);
+  font-family: 'Georgia', serif;
+}
+.hard-detail { margin-top: 4px; line-height: 1.65; }
+
+.fr-score {
+  font-weight: 700;
+  color: var(--sage-dark);
+  margin-bottom: 6px;
+  font-size: 1rem;
+}
+.fr-spoken { color: var(--text-soft); font-size: 0.9rem; margin-bottom: 6px; }
+.fr-ok { color: var(--sage-dark); font-weight: 600; }
+.fr-no { color: var(--danger-dark); text-decoration: line-through; }
+.follow-err { color: var(--danger-dark); }
 
 /* Words */
 .word-token {
@@ -196,73 +258,191 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
   transition: all 0.15s;
 }
 .word-token:hover {
-  background: #fef3c7;
-  border-bottom-color: var(--warn);
+  background: var(--yellow-soft);
+  border-bottom-color: var(--warm);
 }
 
 /* Buttons mini */
 .btn-mini {
-  background: white;
+  background: var(--card);
   border: 1px solid var(--border);
-  padding: 2px 8px;
-  border-radius: 4px;
+  padding: 3px 10px;
+  border-radius: 10px;
   font-size: 0.75rem;
   margin-left: 4px;
-  color: var(--muted);
+  color: var(--text-soft);
+  cursor: pointer;
 }
-.btn-mini:hover { background: var(--primary); color: white; border-color: var(--primary); }
+.btn-mini:hover { background: var(--sage); color: white; border-color: var(--sage); }
 
-.loading-mini { color: var(--muted); font-size: 0.9rem; }
+.loading-mini { color: var(--text-soft); font-size: 0.9rem; padding: 8px 0; }
 
 /* Side Panel */
 .side-panel {
-  position: fixed; top: 0; right: -320px;
-  width: 320px; max-width: 85vw;
+  position: fixed; top: 0; right: -360px;
+  width: 360px; max-width: 88vw;
   height: 100vh;
   background: var(--card);
   border-left: 1px solid var(--border);
   transition: right 0.3s;
   z-index: 200;
   overflow-y: auto;
-  padding: 16px;
+  padding: 18px;
 }
 .side-panel.open { right: 0; }
-.side-panel h3 { margin: 16px 0 8px; font-size: 1rem; }
+.side-panel h3 {
+  margin: 18px 0 10px;
+  font-size: 1rem;
+  color: var(--sage-dark);
+  font-weight: 700;
+}
 .side-close {
-  position: absolute; top: 12px; right: 12px;
-  background: none; border: none; font-size: 1.2rem;
+  position: sticky; top: 0; float: right;
+  background: var(--bg-soft); border: none;
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  font-size: 1rem; font-weight: 700;
+  color: var(--text-soft);
+  z-index: 10;
 }
 .setting-row {
   display: flex; justify-content: space-between; align-items: center;
-  padding: 8px 0; border-bottom: 1px solid var(--border);
+  padding: 10px 0; border-bottom: 1px solid var(--border);
 }
-.setting-row label { flex: 1; }
-.setting-row select, .setting-row input[type="checkbox"] { margin-left: 8px; }
-.font-controls { display: flex; gap: 6px; align-items: center; }
+.setting-row label { flex: 1; color: var(--text); }
+.setting-row select {
+  background: var(--bg-soft); border: 1px solid var(--border);
+  padding: 6px 10px; border-radius: 10px; color: var(--text);
+}
+.font-controls { display: flex; gap: 8px; align-items: center; }
 .font-controls button {
-  width: 32px; height: 32px;
-  border: 1px solid var(--border); background: white;
-  border-radius: 4px; font-size: 1rem;
+  width: 34px; height: 34px;
+  border: none;
+  background: var(--bg-soft);
+  border-radius: 10px; font-size: 1.1rem;
+  color: var(--text);
+}
+.font-controls span { min-width: 40px; text-align: center; font-weight: 600; }
+
+/* Voice gender selector */
+.gender-toggle {
+  display: flex; gap: 0;
+  background: var(--bg-soft);
+  border-radius: 20px;
+  padding: 4px;
+  margin-top: 6px;
+}
+.gender-toggle button {
+  flex: 1; padding: 8px 14px;
+  border: none; background: transparent;
+  border-radius: 16px;
+  font-weight: 600; color: var(--text-soft);
+  font-size: 0.9rem;
+}
+.gender-toggle button.active {
+  background: var(--sage); color: white;
+}
+
+/* Speed grid */
+.speed-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-top: 8px;
+}
+.speed-btn {
+  padding: 8px 0;
+  border: 1px solid var(--border);
+  background: var(--card);
+  border-radius: 12px;
+  font-size: 0.85rem;
+  color: var(--text);
+}
+.speed-btn.active {
+  background: var(--sage); color: white; border-color: var(--sage);
+}
+
+/* Document list (side panel) */
+.doc-toolbar {
+  display: flex; gap: 6px; margin: 8px 0;
+  flex-wrap: wrap;
+}
+.doc-toolbar input {
+  flex: 1; min-width: 100px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg-soft);
+  font-size: 0.88rem;
+}
+.doc-toolbar select {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg-soft);
+  font-size: 0.85rem;
+}
+.doc-toolbar-actions {
+  display: flex; gap: 6px; margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+.doc-toolbar-actions button {
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  border-radius: 12px;
+  font-size: 0.82rem;
+  color: var(--text-soft);
+}
+.doc-toolbar-actions button:hover { background: var(--bg-soft); }
+.doc-toolbar-actions .btn-danger {
+  color: var(--danger-dark);
+  border-color: var(--danger);
 }
 
 .doc-item {
-  padding: 10px;
+  padding: 12px;
   border: 1px solid var(--border);
-  border-radius: 6px;
-  margin-bottom: 6px;
-  cursor: pointer;
+  border-radius: 12px;
+  margin-bottom: 8px;
   position: relative;
+  background: var(--card);
+  display: flex; gap: 10px;
+  align-items: flex-start;
 }
-.doc-item:hover { background: var(--bg); }
-.doc-title { font-weight: 500; word-break: keep-all; }
-.doc-meta { font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
+.doc-item input[type="checkbox"] {
+  margin-top: 4px;
+  flex-shrink: 0;
+}
+.doc-item-body { flex: 1; cursor: pointer; min-width: 0; }
+.doc-title {
+  font-weight: 600; word-break: keep-all;
+  color: var(--text); margin-bottom: 4px;
+}
+.doc-meta {
+  font-size: 0.78rem;
+  color: var(--text-soft);
+}
 .doc-badge {
-  font-size: 0.7rem; background: var(--warn); color: white;
-  padding: 1px 6px; border-radius: 3px; margin-left: 4px;
+  display: inline-block;
+  font-size: 0.7rem;
+  background: var(--warm); color: var(--text);
+  padding: 1px 8px; border-radius: 8px;
+  margin-left: 4px;
 }
-.doc-del {
-  position: absolute; top: 8px; right: 8px;
+.doc-actions {
+  display: flex; gap: 4px; margin-top: 8px;
+  flex-wrap: wrap;
 }
+.doc-actions button {
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  border-radius: 10px;
+  font-size: 0.75rem;
+  color: var(--text-soft);
+}
+.doc-actions button:hover { background: var(--bg-soft); }
 
 /* Word Modal */
 .word-modal-root {
@@ -271,7 +451,7 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
 }
 .word-modal-backdrop {
   position: absolute; inset: 0;
-  background: rgba(0,0,0,0.5);
+  background: rgba(0,0,0,0.45);
 }
 .word-modal-panel {
   position: absolute;
@@ -280,118 +460,142 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
   width: 92%; max-width: 600px;
   max-height: 90vh;
   background: var(--card);
-  border-radius: 12px;
-  padding: 24px 20px 20px;
+  border-radius: 18px;
+  padding: 20px;
   overflow-y: auto;
 }
 .word-modal-close {
   position: sticky; top: 0; float: right;
-  background: rgba(0,0,0,0.4); color: white;
-  border: none; width: 32px; height: 32px;
-  border-radius: 50%; font-weight: 700;
+  background: rgba(61, 74, 61, 0.4);
+  color: white;
+  border: none; width: 34px; height: 34px;
+  border-radius: 50%;
+  font-weight: 700; font-size: 0.95rem;
   z-index: 10;
+  backdrop-filter: blur(4px);
 }
 .word-modal-back {
-  background: white;
-  border: 1px solid var(--border);
-  padding: 4px 10px; border-radius: 5px;
+  background: var(--bg-soft);
+  border: none;
+  padding: 6px 14px; border-radius: 14px;
   font-size: 0.85rem;
+  color: var(--text);
   margin-bottom: 10px;
 }
 .word-modal-body { clear: both; }
 .wm-header {
-  display: flex; align-items: center; gap: 8px;
+  display: flex; align-items: center; gap: 10px;
   flex-wrap: wrap;
-  padding-bottom: 12px;
+  padding-bottom: 14px;
   border-bottom: 1px solid var(--border);
   margin-bottom: 12px;
 }
-.wm-word { font-size: 1.6rem; font-weight: 700; }
-.wm-ipa { color: var(--muted); font-style: italic; }
+.wm-word {
+  font-size: 1.7rem; font-weight: 700;
+  color: var(--text);
+}
+.wm-ipa {
+  color: var(--text-soft);
+  font-family: 'Georgia', serif;
+  font-style: italic;
+}
 .wm-row {
-  padding: 6px 0;
-  display: flex; gap: 8px; align-items: center;
+  padding: 8px 0;
+  display: flex; gap: 10px; align-items: baseline;
   flex-wrap: wrap;
 }
 .wm-en-row { word-break: keep-all; }
 .wm-label {
-  font-size: 0.8rem; font-weight: 600; color: var(--muted);
-  background: var(--bg);
-  padding: 2px 8px; border-radius: 4px;
+  font-size: 0.78rem; font-weight: 700;
+  color: var(--sage-dark);
+  background: var(--sage-soft);
+  padding: 3px 10px; border-radius: 10px;
   flex-shrink: 0;
 }
-.wm-val { flex: 1; }
+.wm-val { flex: 1; min-width: 0; }
 .wm-section {
-  margin-top: 14px;
-  padding-top: 12px;
+  margin-top: 16px;
+  padding-top: 14px;
   border-top: 1px solid var(--border);
 }
 .wm-title {
-  font-weight: 600; font-size: 0.95rem;
-  margin-bottom: 8px; color: var(--primary);
+  font-weight: 700; font-size: 0.95rem;
+  margin-bottom: 10px; color: var(--sage-dark);
 }
-.wm-morpheme { padding: 4px 0; word-break: keep-all; }
+.wm-morpheme { padding: 6px 0; word-break: keep-all; }
 .wm-mtype {
   display: inline-block; min-width: 60px;
-  font-size: 0.8rem; color: var(--muted);
+  font-size: 0.78rem;
+  color: white;
+  background: var(--sage);
+  padding: 1px 8px;
+  border-radius: 8px;
+  margin-right: 6px;
 }
-.wm-mtext { font-weight: 600; margin-right: 8px; }
-.wm-mkr { color: var(--text); }
+.wm-mtext {
+  font-weight: 700;
+  margin-right: 8px;
+  font-family: 'Georgia', serif;
+}
+.wm-mkr { color: var(--text-soft); }
 .wm-vform {
-  display: flex; align-items: center; gap: 6px;
-  padding: 4px 0;
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 0;
 }
 .wm-vlabel {
-  display: inline-block; min-width: 70px;
-  font-size: 0.85rem; color: var(--muted);
+  display: inline-block; min-width: 80px;
+  font-size: 0.85rem;
+  color: var(--text-soft);
+  font-weight: 600;
 }
-.wm-vval { font-weight: 500; }
+.wm-vval { font-weight: 600; }
 .wm-related {
-  padding: 8px 0;
+  padding: 10px 0;
   border-bottom: 1px solid var(--border);
 }
 .wm-related:last-child { border-bottom: none; }
 .wm-related-head {
-  display: flex; align-items: center; gap: 4px;
+  display: flex; align-items: center; gap: 6px;
   margin-bottom: 4px;
 }
 .wm-related-word {
-  font-weight: 600; color: var(--primary);
+  font-weight: 700;
+  color: var(--sage-dark);
   font-size: 1.05rem;
 }
 .wm-related-mean, .wm-related-ex {
-  margin: 4px 0 4px 8px;
+  margin: 6px 0 4px 8px;
   font-size: 0.92rem;
   word-break: keep-all;
   color: var(--text);
 }
-.wm-related-ex { color: var(--muted); font-style: italic; }
+.wm-related-ex { color: var(--text-soft); font-style: italic; }
 .wm-example {
-  padding: 8px 0;
+  padding: 10px 0;
   border-bottom: 1px solid var(--border);
 }
 .wm-example:last-child { border-bottom: none; }
 .wm-ex-head {
-  display: flex; align-items: center; gap: 6px;
-  margin-bottom: 4px;
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 6px;
 }
 .wm-ex-label {
-  font-size: 0.75rem; font-weight: 600; color: var(--muted);
-  background: var(--bg);
-  padding: 1px 6px; border-radius: 3px;
+  font-size: 0.75rem; font-weight: 700;
+  color: white;
+  background: var(--sage);
+  padding: 2px 10px; border-radius: 10px;
 }
-.wm-ex-en, .wm-ex-kr {
-  margin: 4px 0; word-break: keep-all;
-}
-.wm-ex-kr { color: var(--muted); }
-.word-err { color: var(--danger); padding: 12px; }
+.wm-ex-en, .wm-ex-kr { margin: 4px 0; word-break: keep-all; }
+.wm-ex-kr { color: var(--text-soft); margin-top: 6px; }
+.word-err { color: var(--danger-dark); padding: 12px; }
 
 /* Toast */
 .toast {
-  position: fixed; bottom: 80px; left: 50%;
+  position: fixed; bottom: 90px; left: 50%;
   transform: translateX(-50%);
-  background: rgba(0,0,0,0.85); color: white;
-  padding: 10px 18px;
+  background: rgba(61, 74, 61, 0.92);
+  color: white;
+  padding: 11px 20px;
   border-radius: 20px;
   z-index: 1000;
   display: none;
@@ -402,25 +606,25 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
 
 /* Status */
 .status-text {
-  font-size: 0.85rem; color: var(--muted);
+  font-size: 0.85rem; color: var(--text-soft);
   padding: 4px 0;
 }
 
-/* Scroll Top Button */
+/* Scroll Top Button (40% opacity) */
 .scroll-top-btn {
   position: fixed;
   bottom: 24px; right: 24px;
-  width: 48px; height: 48px;
+  width: 50px; height: 50px;
   border-radius: 50%;
-  background: rgba(37, 99, 235, 0.7);
-  color: white;
+  background: rgba(168, 196, 162, 0.4);
+  color: var(--text);
   border: none;
   display: flex; align-items: center; justify-content: center;
   z-index: 90;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-  backdrop-filter: blur(4px);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  backdrop-filter: blur(6px);
 }
-.scroll-top-btn:hover { background: rgba(37, 99, 235, 0.95); }
+.scroll-top-btn:hover { background: rgba(168, 196, 162, 0.7); }
 
 /* Hidden YouTube Player */
 #ytPlayerContainer {
@@ -432,21 +636,21 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
 
 /* Responsive */
 @media (max-width: 600px) {
-  .app-container { padding: 12px; }
-  .card { padding: 12px; }
-  .wm-word { font-size: 1.4rem; }
+  .app-container { padding: 8px 12px 80px; }
+  .card { padding: 14px; }
+  .wm-word { font-size: 1.45rem; }
+  .speed-grid { grid-template-columns: repeat(4, 1fr); }
 }
 </style>
 </head>
 <body>
 
 <header class="app-header">
-  <h1 class="app-title">Thinking Skills</h1>
+  <h1 class="app-title">THINKING SKILLS</h1>
   <button id="hamburgerBtn" class="hamburger-btn">설정</button>
 </header>
 
 <main class="app-container">
-  <!-- 영문 입력 카드 -->
   <div id="inputCard" class="card input-card">
     <input id="urlInput" type="text" class="url-input" placeholder="YouTube URL 또는 텍스트 입력">
     <div class="input-row">
@@ -455,11 +659,11 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
         파일 선택
         <input id="fileInput" type="file" accept=".txt,.pdf,.docx,.doc,image/*">
       </label>
+      <button id="saveBtn" class="btn-save" style="display:none">저장</button>
     </div>
     <div id="statusText" class="status-text"></div>
   </div>
   
-  <!-- 한국어 입력 카드 -->
   <div id="koreanInputCard" class="card kr-input-card">
     <h3 style="margin-top:0">한국어 → 영어</h3>
     <div class="kr-row">
@@ -470,91 +674,89 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
     </div>
     <div class="kr-row">
       <button id="recStartBtn" class="btn-primary">녹음 시작</button>
-      <button id="recStopBtn" class="btn-secondary" style="display:none; background:var(--danger); color:white; border-color:var(--danger);">녹음 정지</button>
+      <button id="recStopBtn" class="btn-secondary" style="display:none; background:var(--danger); color:white;">녹음 정지</button>
       <span id="recTimer" class="rec-timer">00:00 / 05:00</span>
     </div>
     <div class="rec-bar-wrap"><div id="recBar" class="rec-bar"></div></div>
     <div id="koreanResultBox" style="display:none"></div>
   </div>
   
-  <!-- 진행상황 -->
   <div id="progressCard" class="card progress-card">
     <div class="progress-bar-wrap"><div id="progressBar" class="progress-bar"></div></div>
     <div id="progressText" class="progress-text"></div>
-    <button id="cancelBtn" class="btn-secondary" style="margin-top:8px;">취소</button>
+    <button id="cancelBtn" class="btn-secondary" style="margin-top:10px;">취소</button>
   </div>
   
-  <!-- 문장 목록 -->
   <div id="sentenceList"></div>
 </main>
 
-<!-- 사이드 패널 -->
 <aside id="sidePanel" class="side-panel">
   <button id="sidePanelClose" class="side-close" aria-label="닫기">X</button>
-  <h3>표시</h3>
+  
+  <h3>글자 크기</h3>
   <div class="setting-row">
-    <label>글자 크기</label>
+    <label>크기</label>
     <div class="font-controls">
       <button id="fontMinus">−</button>
-      <span id="fontSizeLabel">16px</span>
+      <span id="fontSizeLabel">16</span>
       <button id="fontPlus">+</button>
     </div>
   </div>
   
-  <h3>음성</h3>
+  <h3>목소리 설정</h3>
+  <div class="gender-toggle" id="genderToggle">
+    <button data-gender="female" class="active">여성</button>
+    <button data-gender="male">남성</button>
+  </div>
+  
+  <h3 id="speedTitle">재생 속도: 1.0x</h3>
+  <div class="speed-grid" id="speedGrid"></div>
+  
+  <h3>재생 모드</h3>
   <div class="setting-row">
-    <label for="voiceModeSelect">재생 모드</label>
+    <label for="voiceModeSelect">소스</label>
     <select id="voiceModeSelect">
       <option value="tts">TTS</option>
       <option value="original">원음</option>
     </select>
   </div>
-  <div class="setting-row">
-    <label for="voiceGenderSelect">목소리</label>
-    <select id="voiceGenderSelect">
-      <option value="female">여성</option>
-      <option value="male">남성</option>
-    </select>
-  </div>
-  <div class="setting-row">
-    <label for="speedSelect">속도</label>
-    <select id="speedSelect">
-      <option value="0.5">0.5x</option>
-      <option value="0.75">0.75x</option>
-      <option value="1" selected>1x</option>
-      <option value="1.25">1.25x</option>
-      <option value="1.5">1.5x</option>
-    </select>
-  </div>
   
-  <h3>모드</h3>
+  <h3>한국어 → 영어 모드</h3>
   <div class="setting-row">
-    <label for="koreanModeToggle">한국어 → 영어</label>
+    <label for="koreanModeToggle">활성화</label>
     <input id="koreanModeToggle" type="checkbox">
   </div>
   
   <h3>저장된 문서</h3>
+  <div class="doc-toolbar">
+    <input id="docSearch" type="text" placeholder="검색">
+    <select id="docSort">
+      <option value="recent">최신순</option>
+      <option value="name">이름순</option>
+    </select>
+  </div>
+  <div class="doc-toolbar-actions">
+    <button id="docSelectAll">전체선택</button>
+    <button id="docDeleteSelected" class="btn-danger">선택삭제</button>
+    <button id="docDeleteAll" class="btn-danger">전체삭제</button>
+  </div>
   <div id="docList"></div>
 </aside>
 
-<!-- 토스트 -->
 <div id="toast" class="toast"></div>
-
-<!-- YouTube IFrame Player -->
 <div id="ytPlayerContainer"><div id="ytPlayer"></div></div>
 
 <script>
 /* ============================================================
-   Part 1/3 : STATE / DB / Gemini Queue / TTS / YouTube
+   STATE / 유틸
    ============================================================ */
-
 const $ = (s, root = document) => root.querySelector(s);
 const $$ = (s, root = document) => Array.from(root.querySelectorAll(s));
 
 const STATE = {
   fontSize: 16,
-  speed: 1,
-  voiceMode: 'tts',      // 'tts' | 'original'
+  speed: 1.0,
+  voiceMode: 'tts',
   voiceGender: 'female',
   voices: { female: null, male: null },
   db: null,
@@ -563,21 +765,22 @@ const STATE = {
   geminiLast: 0,
   sentences: [],
   analyzing: false,
-  chunkQueue: [],
   currentDocId: null,
   currentVideoId: null,
   ytSegments: [],
   ytPlayer: null,
   sourceType: null,
+  currentFullText: '',
+  currentRawFile: null,
   wordCache: {},
   wordStack: [],
   koreanMode: false,
-  koreanSource: '',
-  englishLiteral: '',
-  englishNatural: ''
+  docSearch: '',
+  docSort: 'recent',
+  docSelected: new Set(),
+  activePlayBtn: null
 };
 
-/* ---------- 토스트 / 상태 ---------- */
 function toast(msg, ms = 2500) {
   const el = $('#toast');
   if (!el) return;
@@ -590,10 +793,17 @@ function setStatus(msg) {
   const el = $('#statusText');
   if (el) el.textContent = msg || '';
 }
+function escapeHtml(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
 
-/* ---------- IndexedDB ---------- */
+/* ============================================================
+   IndexedDB
+   ============================================================ */
 const DB_NAME = 'thinking_skills_db';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 function dbOpen() {
   return new Promise((resolve, reject) => {
@@ -606,12 +816,14 @@ function dbOpen() {
       if (!db.objectStoreNames.contains('words')) {
         db.createObjectStore('words', { keyPath: 'id' });
       }
+      if (!db.objectStoreNames.contains('files')) {
+        db.createObjectStore('files', { keyPath: 'docId' });
+      }
     };
     req.onsuccess = () => { STATE.db = req.result; resolve(req.result); };
     req.onerror = () => reject(req.error);
   });
 }
-
 function dbPut(store, value) {
   return new Promise((resolve, reject) => {
     if (!STATE.db) return reject(new Error('DB not opened'));
@@ -649,7 +861,9 @@ function dbDelete(store, key) {
   });
 }
 
-/* ---------- Gemini 큐 (10초 간격, 429 시 15초 대기) ---------- */
+/* ============================================================
+   Gemini 큐
+   ============================================================ */
 const GEMINI_MIN_INTERVAL = 10000;
 
 function callGemini(body) {
@@ -658,63 +872,98 @@ function callGemini(body) {
     processGeminiQueue();
   });
 }
-
 async function processGeminiQueue() {
   if (STATE.geminiBusy) return;
   if (STATE.geminiQueue.length === 0) return;
   STATE.geminiBusy = true;
-  
   while (STATE.geminiQueue.length > 0) {
     const wait = Math.max(0, GEMINI_MIN_INTERVAL - (Date.now() - STATE.geminiLast));
     if (wait > 0) await new Promise(r => setTimeout(r, wait));
-    
     const job = STATE.geminiQueue.shift();
     STATE.geminiLast = Date.now();
-    
     try {
       const res = await fetch('/api/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(job.body)
       });
-      
       if (res.status === 429 || res.status === 503) {
         STATE.geminiQueue.unshift(job);
         await new Promise(r => setTimeout(r, 15000));
         continue;
       }
-      
       if (!res.ok) {
         const errTxt = await res.text();
         job.reject(new Error(`서버 ${res.status}: ${errTxt.slice(0, 150)}`));
         continue;
       }
-      
       const data = await res.json();
       job.resolve(data);
     } catch (err) {
       job.reject(err);
     }
   }
-  
   STATE.geminiBusy = false;
 }
 
-/* ---------- TTS ---------- */
-function loadVoices() {
-  const voices = speechSynthesis.getVoices().filter(v =>
-    v.lang.startsWith('en') || /english/i.test(v.name)
+// 즉시 호출 (큐 우회) - 단어장/번역/안들리지/예문번역용
+async function callGeminiDirect(body) {
+  const res = await fetch('/api/gemini', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) {
+    const errTxt = await res.text();
+    throw new Error(`${res.status}: ${errTxt.slice(0, 120)}`);
+  }
+  return await res.json();
+}
+
+/* ============================================================
+   TTS - 미국식 영어 강제 + 성별 명확화
+   ============================================================ */
+const US_FEMALE_NAMES = [
+  'Samantha', 'Allison', 'Ava', 'Susan',
+  'Google US English',
+  'Microsoft Aria', 'Microsoft Jenny', 'Microsoft Zira', 'Microsoft Michelle',
+  'Microsoft Ana', 'Microsoft Elizabeth',
+  'en-US-AriaNeural', 'en-US-JennyNeural', 'en-US-MichelleNeural'
+];
+const US_MALE_NAMES = [
+  'Alex', 'Fred', 'Aaron', 'Tom', 'Bruce',
+  'Microsoft Guy', 'Microsoft Christopher', 'Microsoft Davis',
+  'Microsoft Eric', 'Microsoft Roger', 'Microsoft Steffan',
+  'en-US-GuyNeural', 'en-US-DavisNeural', 'en-US-ChristopherNeural'
+];
+// 영국식 - 명시 제외
+const UK_BLOCKLIST = /Daniel|Oliver|Arthur|Kate|Serena|Moira|Tessa|Karen|Veena|Rishi|Sangeeta/i;
+
+function pickVoice(genderPref) {
+  const all = speechSynthesis.getVoices();
+  if (!all.length) return null;
+  
+  const usVoices = all.filter(v =>
+    /en[-_]US/i.test(v.lang) || /US English/i.test(v.name)
   );
+  const names = genderPref === 'male' ? US_MALE_NAMES : US_FEMALE_NAMES;
   
-  const female = voices.find(v => /female|samantha|victoria|karen|moira|tessa|google us english/i.test(v.name)) ||
-                 voices.find(v => v.lang === 'en-US') ||
-                 voices[0];
-  const male = voices.find(v => /male|daniel|alex|fred|tom|aaron/i.test(v.name)) ||
-               voices.find(v => v.lang === 'en-US' && v !== female) ||
-               female;
-  
-  STATE.voices.female = female || null;
-  STATE.voices.male = male || null;
+  // 1. 정확한 이름 매칭 (en-US 중)
+  for (const wanted of names) {
+    const v = usVoices.find(x => x.name === wanted || x.name.includes(wanted));
+    if (v && !UK_BLOCKLIST.test(v.name)) return v;
+  }
+  // 2. en-US 중 영국식 제외하고 첫 번째
+  const fallbackUS = usVoices.find(v => !UK_BLOCKLIST.test(v.name));
+  if (fallbackUS) return fallbackUS;
+  // 3. 전체에서 en으로 시작, 영국식 제외
+  const enAny = all.find(v => /^en/i.test(v.lang) && !UK_BLOCKLIST.test(v.name));
+  return enAny || null;
+}
+
+function loadVoices() {
+  STATE.voices.female = pickVoice('female');
+  STATE.voices.male = pickVoice('male');
 }
 if ('speechSynthesis' in window) {
   loadVoices();
@@ -731,59 +980,54 @@ function warmupTTS() {
 }
 
 function speak(text, opts = {}) {
-  if (!('speechSynthesis' in window)) { toast('TTS를 지원하지 않는 브라우저입니다'); return; }
+  if (!('speechSynthesis' in window)) { toast('TTS 미지원 브라우저'); return; }
   if (!text) return;
   speechSynthesis.cancel();
   
   const utter = new SpeechSynthesisUtterance(text);
-  const lang = opts.lang || 'en-US';
-  utter.lang = lang;
-  utter.rate = lang.startsWith('en') ? STATE.speed : 1;
+  const isEnglish = !opts.lang || opts.lang.startsWith('en');
+  utter.lang = isEnglish ? 'en-US' : opts.lang;
+  utter.rate = isEnglish ? STATE.speed : 1;
   
-  if (lang.startsWith('en')) {
+  if (isEnglish) {
     const v = STATE.voiceGender === 'male' ? STATE.voices.male : STATE.voices.female;
     if (v) utter.voice = v;
   }
   
   if (opts.onEnd) utter.onend = opts.onEnd;
+  utter.onerror = () => { if (opts.onEnd) opts.onEnd(); };
   speechSynthesis.speak(utter);
 }
-
 function stopSpeaking() {
   if ('speechSynthesis' in window) speechSynthesis.cancel();
 }
-
 function applyPlaybackChange() {
   if (STATE.ytPlayer && typeof STATE.ytPlayer.setPlaybackRate === 'function') {
     try { STATE.ytPlayer.setPlaybackRate(nearestYtRate(STATE.speed)); } catch {}
   }
 }
 
-/* ---------- YouTube IFrame Player ---------- */
+/* ============================================================
+   YouTube
+   ============================================================ */
 let ytApiReady = false;
 let ytApiQueue = [];
-
 function loadYouTubeApi() {
   if (ytApiReady || window.YT?.Player) { ytApiReady = true; return; }
   if (window._ytApiLoading) return;
   window._ytApiLoading = true;
-  
   window.onYouTubeIframeAPIReady = () => {
     ytApiReady = true;
-    ytApiQueue.forEach(fn => fn());
-    ytApiQueue = [];
+    ytApiQueue.forEach(fn => fn()); ytApiQueue = [];
   };
-  
   const s = document.createElement('script');
   s.src = 'https://www.youtube.com/iframe_api';
   document.head.appendChild(s);
 }
-
 function whenYtReady(fn) {
   if (ytApiReady && window.YT?.Player) fn();
   else { ytApiQueue.push(fn); loadYouTubeApi(); }
 }
-
 function initYouTubePlayer(videoId) {
   whenYtReady(() => {
     if (STATE.ytPlayer && typeof STATE.ytPlayer.cueVideoById === 'function') {
@@ -792,26 +1036,21 @@ function initYouTubePlayer(videoId) {
     STATE.ytPlayer = new YT.Player('ytPlayer', {
       videoId,
       playerVars: { controls: 0, disablekb: 1, fs: 0 },
-      events: {
-        onReady: () => updateOriginalModeAvailability()
-      }
+      events: { onReady: () => updateOriginalModeAvailability() }
     });
   });
 }
-
 function nearestYtRate(rate) {
   const allowed = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
-  let best = 1;
-  let diff = Infinity;
+  let best = 1, diff = Infinity;
   for (const r of allowed) {
     const d = Math.abs(r - rate);
     if (d < diff) { diff = d; best = r; }
   }
   return best;
 }
-
 function playOriginal(start, end, onEnd) {
-  if (!STATE.ytPlayer) return;
+  if (!STATE.ytPlayer) { if (onEnd) onEnd(); return; }
   try {
     STATE.ytPlayer.setPlaybackRate(nearestYtRate(STATE.speed));
     STATE.ytPlayer.seekTo(start, true);
@@ -822,11 +1061,9 @@ function playOriginal(start, end, onEnd) {
       if (onEnd) onEnd();
     }, dur);
   } catch (err) {
-    console.error('original play error', err);
     if (onEnd) onEnd();
   }
 }
-
 function updateOriginalModeAvailability() {
   const select = $('#voiceModeSelect');
   if (!select) return;
@@ -841,18 +1078,17 @@ function updateOriginalModeAvailability() {
 }
 
 /* ============================================================
-   Part 2/3 : 입력 처리 / 분석 / 한국어→영어 / 문장 카드
+   입력 처리
    ============================================================ */
-
 async function handleAnalyze() {
   const input = $('#urlInput')?.value?.trim();
   if (!input) { toast('URL 또는 텍스트를 입력하세요'); return; }
-  
   if (/youtube\.com|youtu\.be/.test(input)) {
     await handleYouTube(input);
   } else if (/^https?:\/\//.test(input)) {
     toast('YouTube URL 또는 텍스트를 입력하세요');
   } else {
+    STATE.currentRawFile = null;
     await analyzeText(input, { sourceType: 'text', title: titleFromText(input) });
   }
 }
@@ -868,15 +1104,11 @@ async function handleYouTube(url) {
     }
     const data = await res.json();
     if (!data.fullText) throw new Error('자막/전사 결과가 비어있습니다');
-    
     STATE.currentVideoId = data.videoId;
     STATE.ytSegments = data.segments || [];
     STATE.sourceType = 'youtube';
-    
-    if (data.segments && data.segments.length > 0) {
-      initYouTubePlayer(data.videoId);
-    }
-    
+    STATE.currentRawFile = null;
+    if (data.segments?.length > 0) initYouTubePlayer(data.videoId);
     const title = (data.title && titleFromText(data.title)) || titleFromText(data.fullText);
     await analyzeText(data.fullText, {
       sourceType: 'youtube',
@@ -896,7 +1128,6 @@ async function handleFile(file) {
   const name = file.name.toLowerCase();
   setStatus(`${file.name} 처리 중...`);
   showProgress(0, '파일 분석 중');
-  
   try {
     let text = '';
     if (name.endsWith('.txt')) {
@@ -919,10 +1150,15 @@ async function handleFile(file) {
     } else {
       throw new Error('지원하지 않는 파일 형식');
     }
-    
     if (!text.trim()) throw new Error('텍스트를 추출하지 못했습니다');
     STATE.sourceType = 'file';
-    await analyzeText(text, { sourceType: 'file', title: titleFromText(text) });
+    STATE.currentRawFile = file;
+    await analyzeText(text, {
+      sourceType: 'file',
+      title: titleFromText(file.name.replace(/\.[^.]+$/, '')),
+      fileName: file.name,
+      fileType: file.type
+    });
   } catch (err) {
     hideProgress();
     setStatus('');
@@ -958,10 +1194,13 @@ function splitSentences(text) {
   return raw.map(s => s.trim()).filter(s => s.length > 2);
 }
 
+/* ============================================================
+   분석
+   ============================================================ */
 async function analyzeText(text, meta = {}) {
   STATE.sentences = [];
   STATE.analyzing = true;
-  STATE.chunkQueue = [];
+  STATE.currentFullText = text;
   
   const container = $('#sentenceList');
   if (container) container.innerHTML = '';
@@ -982,12 +1221,30 @@ async function analyzeText(text, meta = {}) {
     videoId: meta.videoId || null,
     segments: meta.segments || [],
     fullText: text,
+    fileName: meta.fileName || null,
+    fileType: meta.fileType || null,
     sentences: [],
     createdAt: new Date().toISOString()
   };
   await dbPut('documents', docRecord);
   
-  const CHUNK = 10;
+  // 원본 파일 저장
+  if (STATE.currentRawFile) {
+    try {
+      await dbPut('files', {
+        docId,
+        blob: STATE.currentRawFile,
+        name: STATE.currentRawFile.name,
+        type: STATE.currentRawFile.type
+      });
+    } catch (e) { console.warn('파일 저장 실패', e); }
+  }
+  
+  // 저장 버튼 노출
+  const saveBtn = $('#saveBtn');
+  if (saveBtn) saveBtn.style.display = 'inline-block';
+  
+  const CHUNK = 8;
   const total = sentences.length;
   let done = 0;
   
@@ -995,20 +1252,19 @@ async function analyzeText(text, meta = {}) {
     if (!STATE.analyzing) break;
     const chunk = sentences.slice(i, i + CHUNK);
     updateProgress((done / total) * 100, `${done}/${total} 문장 분석 중`);
-    
     try {
       const analyzed = await analyzeChunk(chunk);
       analyzed.forEach((s, idx) => {
         const sentenceObj = {
           id: `${docId}_${i + idx}`,
           index: i + idx,
+          number: i + idx + 1,
           ...s
         };
         STATE.sentences.push(sentenceObj);
         renderSentenceBlock(sentenceObj);
       });
       done += chunk.length;
-      
       docRecord.sentences = STATE.sentences;
       await dbPut('documents', docRecord);
     } catch (err) {
@@ -1025,26 +1281,31 @@ async function analyzeText(text, meta = {}) {
 }
 
 async function analyzeChunk(sentences) {
-  const prompt = `다음 영어 문장들을 분석해서 JSON 배열로 반환하세요. 각 객체는 정확히 다음 형식이어야 합니다:
+  const prompt = `You are an English-Korean translator. For each English sentence below, return BOTH a literal translation AND a natural translation in Korean. NEVER leave translations empty.
+
+Return EXACTLY this JSON array structure (no other text):
 [
   {
-    "text": "원문 그대로",
-    "translationLiteral": "직역(한국어)",
-    "translationNatural": "의역(한국어)",
-    "words": ["clickable", "word", "tokens"]
+    "text": "exact original English sentence",
+    "translationLiteral": "직역 한국어 번역 (반드시 작성)",
+    "translationNatural": "자연스러운 한국어 의역 (반드시 작성)",
+    "words": ["meaningful", "words", "only"]
   }
 ]
-- words는 의미있는 단어만 (관사/전치사 제외)
-- 문장 수: ${sentences.length}개
-- 입력 순서를 반드시 유지
 
-문장 목록:
+Rules:
+- Both translation fields MUST be non-empty Korean text
+- "words" excludes articles (a, an, the) and basic prepositions
+- Array order MUST match input order
+- Number of objects: exactly ${sentences.length}
+
+Sentences:
 ${sentences.map((s, i) => `${i + 1}. ${s}`).join('\n')}`;
   
   const body = {
     contents: [{ role: 'user', parts: [{ text: prompt }] }],
     generationConfig: {
-      temperature: 0.5,
+      temperature: 0.4,
       maxOutputTokens: 4096,
       responseMimeType: 'application/json'
     }
@@ -1055,7 +1316,6 @@ ${sentences.map((s, i) => `${i + 1}. ${s}`).join('\n')}`;
   let parsed;
   try { parsed = JSON.parse(textOut); } catch { parsed = []; }
   if (!Array.isArray(parsed)) parsed = [];
-  
   while (parsed.length < sentences.length) {
     parsed.push({
       text: sentences[parsed.length],
@@ -1083,7 +1343,9 @@ function hideProgress() {
   if (card) card.style.display = 'none';
 }
 
-/* ---------- 한국어 → 영어 ---------- */
+/* ============================================================
+   한국어 → 영어
+   ============================================================ */
 function toggleKoreanMode(on) {
   STATE.koreanMode = on;
   const card = $('#koreanInputCard');
@@ -1109,26 +1371,20 @@ async function handleKoreanAudioUpload(file) {
     toast('음성 처리 실패: ' + err.message);
   }
 }
-
 function fileToBase64(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result;
-      const base64 = result.split(',')[1];
-      resolve(base64);
-    };
+    reader.onload = () => resolve(reader.result.split(',')[1]);
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
 }
-
 async function transcribeKoreanAudio(base64Data, mimeType) {
   const body = {
     contents: [{
       role: 'user',
       parts: [
-        { text: '이 오디오를 한국어로 정확히 받아쓰기 해주세요. 문장부호를 포함하고, 다른 설명 없이 받아쓴 텍스트만 출력하세요.' },
+        { text: '이 오디오를 한국어로 정확히 받아쓰기 해주세요. 문장부호 포함, 받아쓴 텍스트만 출력.' },
         { inline_data: { mime_type: mimeType, data: base64Data } }
       ]
     }],
@@ -1137,40 +1393,26 @@ async function transcribeKoreanAudio(base64Data, mimeType) {
   const result = await callGemini(body);
   return result.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
 }
-
 async function translateAndAnalyzeKorean(koreanText) {
-  const prompt = `다음 한국어 텍스트를 영어로 번역해주세요. 직역과 의역 두 가지를 제공하세요.
-JSON 형식:
-{
-  "korean": "원문 한국어",
-  "literal": "직역 영어",
-  "natural": "자연스러운 의역 영어"
-}
+  const prompt = `Translate the following Korean text to American English. Provide both a literal translation and a natural translation.
+Return strict JSON:
+{"korean":"원문","literal":"literal English","natural":"natural English"}
 
-한국어 원문:
+Korean:
 ${koreanText}`;
-  
   const body = {
     contents: [{ role: 'user', parts: [{ text: prompt }] }],
     generationConfig: {
-      temperature: 0.5,
+      temperature: 0.4,
       maxOutputTokens: 4096,
       responseMimeType: 'application/json'
     }
   };
-  
   updateProgress(60, '영어 번역 분석 중');
   const result = await callGemini(body);
   const txt = result.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-  let parsed;
-  try { parsed = JSON.parse(txt); } catch { parsed = {}; }
-  
-  STATE.koreanSource = parsed.korean || koreanText;
-  STATE.englishLiteral = parsed.literal || '';
-  STATE.englishNatural = parsed.natural || '';
-  
+  let parsed; try { parsed = JSON.parse(txt); } catch { parsed = {}; }
   renderKoreanResult(parsed);
-  
   const targetText = parsed.natural || parsed.literal;
   if (targetText) {
     await analyzeText(targetText, {
@@ -1179,49 +1421,36 @@ ${koreanText}`;
     });
   }
 }
-
 function renderKoreanResult(data) {
   const box = $('#koreanResultBox');
   if (!box) return;
   box.style.display = 'block';
   box.innerHTML = '';
-  
-  const krDiv = document.createElement('div');
-  krDiv.className = 'kr-result-block';
-  krDiv.innerHTML = `<div class="kr-label">한국어 원문</div><div class="kr-text">${escapeHtml(data.korean || '')}</div>`;
-  box.appendChild(krDiv);
-  
-  if (data.literal) {
-    const litDiv = document.createElement('div');
-    litDiv.className = 'kr-result-block';
-    litDiv.innerHTML = `<div class="kr-label">직역</div>`;
+  const make = (label, txt, lang) => {
+    const div = document.createElement('div');
+    div.className = 'kr-result-block';
+    div.innerHTML = `<div class="kr-label">${label}</div>`;
     const wrap = document.createElement('div');
     wrap.className = 'kr-text';
-    wrap.appendChild(renderClickableWords(data.literal));
-    wrap.appendChild(makePlayBtn(data.literal));
-    litDiv.appendChild(wrap);
-    box.appendChild(litDiv);
-  }
-  
-  if (data.natural) {
-    const natDiv = document.createElement('div');
-    natDiv.className = 'kr-result-block';
-    natDiv.innerHTML = `<div class="kr-label">의역</div>`;
-    const wrap = document.createElement('div');
-    wrap.className = 'kr-text';
-    wrap.appendChild(renderClickableWords(data.natural));
-    wrap.appendChild(makePlayBtn(data.natural));
-    natDiv.appendChild(wrap);
-    box.appendChild(natDiv);
-  }
+    if (lang === 'en') {
+      wrap.appendChild(renderClickableWords(txt));
+      wrap.appendChild(makePlayBtn(txt, 'en-US'));
+    } else {
+      wrap.textContent = txt;
+    }
+    div.appendChild(wrap);
+    box.appendChild(div);
+  };
+  if (data.korean) make('한국어 원문', data.korean, 'ko');
+  if (data.literal) make('직역', data.literal, 'en');
+  if (data.natural) make('의역', data.natural, 'en');
 }
 
-/* ---------- 직접 녹음 ---------- */
+/* ---------- 녹음 ---------- */
 let recState = { recorder: null, chunks: [], startTime: 0, timerId: null };
 const REC_MAX_SEC = 300;
-
 async function startRecording() {
-  if (recState.recorder) { toast('이미 녹음 중입니다'); return; }
+  if (recState.recorder) { toast('이미 녹음 중'); return; }
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     const mime = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : '';
@@ -1229,7 +1458,6 @@ async function startRecording() {
     recState.recorder = recorder;
     recState.chunks = [];
     recState.startTime = Date.now();
-    
     recorder.ondataavailable = e => { if (e.data.size > 0) recState.chunks.push(e.data); };
     recorder.onstop = async () => {
       stream.getTracks().forEach(t => t.stop());
@@ -1237,21 +1465,16 @@ async function startRecording() {
       clearInterval(recState.timerId);
       resetRecUI();
       recState.recorder = null;
-      
       const file = new File([blob], 'recording.webm', { type: blob.type });
       await handleKoreanAudioUpload(file);
     };
     recorder.start();
-    
-    const startBtn = $('#recStartBtn');
-    const stopBtn = $('#recStopBtn');
-    const timer = $('#recTimer');
-    const bar = $('#recBar');
+    const startBtn = $('#recStartBtn'), stopBtn = $('#recStopBtn');
     if (startBtn) startBtn.style.display = 'none';
     if (stopBtn) stopBtn.style.display = 'inline-block';
-    
     recState.timerId = setInterval(() => {
       const elapsed = (Date.now() - recState.startTime) / 1000;
+      const timer = $('#recTimer'), bar = $('#recBar');
       if (timer) timer.textContent = `${formatTime(elapsed)} / ${formatTime(REC_MAX_SEC)}`;
       if (bar) bar.style.width = `${(elapsed / REC_MAX_SEC) * 100}%`;
       if (elapsed >= REC_MAX_SEC) stopRecording();
@@ -1260,38 +1483,38 @@ async function startRecording() {
     toast('마이크 권한 필요: ' + err.message);
   }
 }
-
 function stopRecording() {
   if (recState.recorder && recState.recorder.state !== 'inactive') {
     recState.recorder.stop();
   }
 }
-
 function resetRecUI() {
-  const startBtn = $('#recStartBtn');
-  const stopBtn = $('#recStopBtn');
-  const timer = $('#recTimer');
-  const bar = $('#recBar');
+  const startBtn = $('#recStartBtn'), stopBtn = $('#recStopBtn');
+  const timer = $('#recTimer'), bar = $('#recBar');
   if (startBtn) startBtn.style.display = 'inline-block';
   if (stopBtn) stopBtn.style.display = 'none';
   if (timer) timer.textContent = '00:00 / 05:00';
   if (bar) bar.style.width = '0%';
 }
-
 function formatTime(sec) {
-  const m = Math.floor(sec / 60);
-  const s = Math.floor(sec % 60);
+  const m = Math.floor(sec / 60), s = Math.floor(sec % 60);
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
-/* ---------- 문장 카드 ---------- */
+/* ============================================================
+   문장 카드
+   ============================================================ */
 function renderSentenceBlock(s) {
   const container = $('#sentenceList');
   if (!container) return;
-  
   const card = document.createElement('div');
   card.className = 'sentence-card';
   card.dataset.id = s.id;
+  
+  const header = document.createElement('div');
+  header.className = 'sentence-header';
+  header.innerHTML = `<span class="sentence-num">${s.number}</span>`;
+  card.appendChild(header);
   
   const textBox = document.createElement('div');
   textBox.className = 'sentence-text';
@@ -1311,7 +1534,7 @@ function renderSentenceBlock(s) {
   const transBtn = document.createElement('button');
   transBtn.className = 'btn-ctrl';
   transBtn.textContent = '번역';
-  transBtn.onclick = () => toggleTranslation(s, card);
+  transBtn.onclick = () => toggleTranslation(s, card, transBtn);
   ctrl.appendChild(transBtn);
   
   const followBtn = document.createElement('button');
@@ -1323,33 +1546,45 @@ function renderSentenceBlock(s) {
   const hardBtn = document.createElement('button');
   hardBtn.className = 'btn-ctrl';
   hardBtn.textContent = '왜 안들리지?';
-  hardBtn.onclick = () => explainHardListening(s, card);
+  hardBtn.onclick = () => explainHardListening(s, card, hardBtn);
   ctrl.appendChild(hardBtn);
   
   card.appendChild(ctrl);
-  
   const slot = document.createElement('div');
   slot.className = 'sentence-slot';
   card.appendChild(slot);
-  
   container.appendChild(card);
+}
+
+function resetActivePlayBtn() {
+  if (STATE.activePlayBtn) {
+    STATE.activePlayBtn.textContent = '재생';
+    STATE.activePlayBtn.dataset.state = 'play';
+    STATE.activePlayBtn = null;
+  }
 }
 
 function toggleSentencePlay(s, btn) {
   if (btn.dataset.state === 'play') {
+    // 다른 재생 중인 것 중지
+    resetActivePlayBtn();
+    stopSpeaking();
+    if (STATE.ytPlayer?.pauseVideo) { try { STATE.ytPlayer.pauseVideo(); } catch {} }
+    
     btn.textContent = '정지';
     btn.dataset.state = 'stop';
+    STATE.activePlayBtn = btn;
     playSentence(s, () => {
       btn.textContent = '재생';
       btn.dataset.state = 'play';
+      if (STATE.activePlayBtn === btn) STATE.activePlayBtn = null;
     });
   } else {
     stopSpeaking();
-    if (STATE.ytPlayer && typeof STATE.ytPlayer.pauseVideo === 'function') {
-      try { STATE.ytPlayer.pauseVideo(); } catch {}
-    }
+    if (STATE.ytPlayer?.pauseVideo) { try { STATE.ytPlayer.pauseVideo(); } catch {} }
     btn.textContent = '재생';
     btn.dataset.state = 'play';
+    if (STATE.activePlayBtn === btn) STATE.activePlayBtn = null;
   }
 }
 
@@ -1360,7 +1595,6 @@ function playSentence(s, onEnd) {
   }
   speak(s.text, { onEnd });
 }
-
 function findSegmentForSentence(s) {
   if (!STATE.ytSegments) return null;
   const target = s.text.toLowerCase().slice(0, 30);
@@ -1370,7 +1604,7 @@ function findSegmentForSentence(s) {
   return null;
 }
 
-function toggleTranslation(s, card) {
+async function toggleTranslation(s, card, btn) {
   const slot = card.querySelector('.sentence-slot');
   if (!slot) return;
   const existing = slot.querySelector('.translation-box');
@@ -1379,11 +1613,32 @@ function toggleTranslation(s, card) {
   const box = document.createElement('div');
   box.className = 'translation-box';
   
+  // 번역이 없거나 비어있으면 즉석 호출
+  if (!s.translationLiteral || !s.translationNatural) {
+    box.innerHTML = '<div class="loading-mini">번역 중...</div>';
+    slot.appendChild(box);
+    try {
+      const result = await fetchTranslationFor(s.text);
+      s.translationLiteral = result.literal || s.translationLiteral || '';
+      s.translationNatural = result.natural || s.translationNatural || '';
+      // 저장 업데이트
+      updateSentenceInDoc(s);
+    } catch (err) {
+      box.innerHTML = `<div class="loading-mini">번역 실패: ${escapeHtml(err.message)}</div>`;
+      return;
+    }
+    box.innerHTML = '';
+  } else {
+    slot.appendChild(box);
+  }
+  
   if (s.translationLiteral) {
     const lit = document.createElement('div');
     lit.className = 'trans-row';
     lit.innerHTML = `<span class="trans-label">직역</span>`;
-    lit.appendChild(renderClickableWords(s.translationLiteral));
+    const t = document.createElement('span');
+    t.textContent = s.translationLiteral;
+    lit.appendChild(t);
     lit.appendChild(makePlayBtn(s.translationLiteral, 'ko-KR'));
     box.appendChild(lit);
   }
@@ -1391,14 +1646,45 @@ function toggleTranslation(s, card) {
     const nat = document.createElement('div');
     nat.className = 'trans-row';
     nat.innerHTML = `<span class="trans-label">의역</span>`;
-    nat.appendChild(renderClickableWords(s.translationNatural));
+    const t = document.createElement('span');
+    t.textContent = s.translationNatural;
+    nat.appendChild(t);
     nat.appendChild(makePlayBtn(s.translationNatural, 'ko-KR'));
     box.appendChild(nat);
   }
-  slot.appendChild(box);
 }
 
-async function explainHardListening(s, card) {
+async function fetchTranslationFor(englishText) {
+  const prompt = `Translate the English sentence to Korean. Return strict JSON ONLY:
+{"literal":"직역 한국어","natural":"자연스러운 의역 한국어"}
+
+Sentence: ${englishText}`;
+  const body = {
+    contents: [{ role: 'user', parts: [{ text: prompt }] }],
+    generationConfig: {
+      temperature: 0.3, maxOutputTokens: 1024,
+      responseMimeType: 'application/json'
+    }
+  };
+  const res = await callGeminiDirect(body);
+  const txt = res.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+  return JSON.parse(txt);
+}
+
+async function updateSentenceInDoc(s) {
+  if (!STATE.currentDocId) return;
+  try {
+    const doc = await dbGet('documents', STATE.currentDocId);
+    if (!doc) return;
+    const idx = (doc.sentences || []).findIndex(x => x.id === s.id);
+    if (idx >= 0) {
+      doc.sentences[idx] = s;
+      await dbPut('documents', doc);
+    }
+  } catch (e) { console.warn('updateSentence', e); }
+}
+
+async function explainHardListening(s, card, btn) {
   const slot = card.querySelector('.sentence-slot');
   if (!slot) return;
   const existing = slot.querySelector('.hard-box');
@@ -1406,24 +1692,69 @@ async function explainHardListening(s, card) {
   
   const box = document.createElement('div');
   box.className = 'hard-box';
-  box.innerHTML = '<div class="loading-mini">분석 중...</div>';
+  box.innerHTML = '<div class="loading-mini">상세 분석 중...</div>';
   slot.appendChild(box);
   
   try {
-    const prompt = `다음 영어 문장이 한국인에게 잘 들리지 않는 이유를 한국어로 설명해주세요. 연음, 약화, 강세, 발화속도 측면에서 구체적으로 2~4개 항목으로 설명하세요. JSON 형식: {"reasons":[{"type":"연음","detail":"설명"}]}
-문장: ${s.text}`;
+    const prompt = `You are an American English pronunciation coach. Analyze the following sentence and explain in DETAIL why a Korean learner would struggle to hear it.
+
+Quote SPECIFIC words/phrases from the sentence. Cover EVERY relevant aspect with separate items. Provide as many items as needed (no limit):
+
+- "linking" (연음/liaison): e.g., "want it" → /wɑːnɪt/
+- "elision" (탈락음/silent sounds): e.g., /t/ deletion in "next day"
+- "reduction" (축약/contractions): "going to" → "gonna", "want to" → "wanna"
+- "weak forms" (기능어 약화): "for", "to", "of", "and", "have", "can" pronounced as schwa
+- "stress shift" (강세 이동): which syllable carries stress
+- "intonation" (억양 패턴)
+- "rhythm" (리듬: stress-timed vs syllable-timed)
+- "assimilation" (동화/연음): "did you" → "didja"
+- "flapping" (T-flap): "water" → "wadder", "better" → "bedder"
+- "idiomatic expressions" (관용 표현)
+- "phrasal verbs" with non-literal meanings
+- "colloquial speech patterns" (구어체 습관)
+
+Return STRICT JSON only:
+{
+  "reasons": [
+    {"type":"연음","target":"want it","detail":"/wɑːnt/ 의 /t/ 가 모음 /ɪt/ 과 연결되어 /wɑːnɪt/ 처럼 발음됩니다. 한국어에는 자음+모음 연음 개념이 약해서 두 단어가 한 단어처럼 들립니다."}
+  ]
+}
+
+Rules:
+- "type": Korean category label (연음/탈락/축약/약화/강세이동/억양/리듬/동화/T-플랩/관용표현/구동사/구어체 등)
+- "target": exact word/phrase from sentence (or pronunciation marker like /wɑːnɪt/)
+- "detail": detailed Korean explanation including IPA when useful, why it sounds different from spelling, and what Korean learners typically mishear
+- Each item must reference SPECIFIC words from the sentence
+- Items count: as many as truly apply (typically 5~15)
+
+Sentence: ${s.text}`;
     const body = {
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.5, maxOutputTokens: 1024, responseMimeType: 'application/json' }
+      generationConfig: {
+        temperature: 0.5, maxOutputTokens: 3072,
+        responseMimeType: 'application/json'
+      }
     };
-    const result = await callGemini(body);
+    const result = await callGeminiDirect(body);
     const txt = result.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
     const data = JSON.parse(txt);
     box.innerHTML = '';
-    (data.reasons || []).forEach(r => {
+    if (!data.reasons || data.reasons.length === 0) {
+      box.innerHTML = '<div class="loading-mini">분석 결과가 없습니다</div>';
+      return;
+    }
+    data.reasons.forEach(r => {
       const item = document.createElement('div');
       item.className = 'hard-item';
-      item.innerHTML = `<span class="hard-type">${escapeHtml(r.type)}</span> ${escapeHtml(r.detail)}`;
+      const top = document.createElement('div');
+      top.innerHTML = `<span class="hard-type">${escapeHtml(r.type || '')}</span>` +
+        (r.target ? `<span class="hard-target">${escapeHtml(r.target)}</span>` : '');
+      if (r.target) top.appendChild(makePlayBtn(r.target, 'en-US'));
+      item.appendChild(top);
+      const detail = document.createElement('div');
+      detail.className = 'hard-detail';
+      detail.textContent = r.detail || '';
+      item.appendChild(detail);
       box.appendChild(item);
     });
   } catch (err) {
@@ -1465,16 +1796,9 @@ function makePlayBtn(text, lang = 'en-US') {
   return btn;
 }
 
-function escapeHtml(str) {
-  return String(str || '')
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-}
-
 /* ============================================================
-   Part 3/3 : 단어장 / 따라읽기 / 문서 / 초기화
+   단어장
    ============================================================ */
-
 const POS_KR = {
   'noun': '명사', 'verb': '동사', 'adjective': '형용사', 'adverb': '부사',
   'pronoun': '대명사', 'preposition': '전치사', 'conjunction': '접속사',
@@ -1516,16 +1840,12 @@ async function openWordModal(word) {
   if (!word) return;
   const root = ensureModalRoot();
   root.style.display = 'block';
-  
   if (STATE.wordStack.length >= MODAL_MAX) STATE.wordStack.shift();
   STATE.wordStack.push(word.toLowerCase());
-  
   const backBtn = root.querySelector('.word-modal-back');
   backBtn.style.display = STATE.wordStack.length > 1 ? 'inline-block' : 'none';
-  
   await renderWordModalContent(word.toLowerCase());
 }
-
 function popWordModal() {
   if (STATE.wordStack.length <= 1) { closeWordModal(); return; }
   STATE.wordStack.pop();
@@ -1535,7 +1855,6 @@ function popWordModal() {
   backBtn.style.display = STATE.wordStack.length > 1 ? 'inline-block' : 'none';
   renderWordModalContent(prev);
 }
-
 function closeWordModal() {
   const root = $('#wordModal');
   if (root) root.style.display = 'none';
@@ -1547,7 +1866,6 @@ async function renderWordModalContent(word) {
   const root = ensureModalRoot();
   const body = root.querySelector('.word-modal-body');
   body.innerHTML = '<div class="loading-mini">불러오는 중...</div>';
-  
   try {
     const data = await getWordInfo(word);
     renderWordData(body, data);
@@ -1559,7 +1877,6 @@ async function renderWordModalContent(word) {
 async function getWordInfo(word) {
   const key = word.toLowerCase();
   if (STATE.wordCache[key]) return STATE.wordCache[key];
-  
   try {
     const cached = await dbGet('words', key);
     if (cached?.data) {
@@ -1568,52 +1885,43 @@ async function getWordInfo(word) {
     }
   } catch {}
   
-  const prompt = `다음 영어 단어를 분석해서 JSON으로 반환하세요. 정확히 이 구조여야 합니다:
+  const prompt = `Analyze the English word and return STRICT JSON only (American English):
 {
-  "word": "원형",
-  "lemma": "기본형",
-  "pronunciationUS": "/IPA/",
-  "partOfSpeech": "noun",
+  "word": "original form",
+  "lemma": "base form",
+  "pronunciationUS": "/American IPA only/",
+  "partOfSpeech": "noun/verb/adjective/...",
   "meaningKR": "한국어 의미",
-  "meaningEN": "English definition sentence",
+  "meaningEN": "Clear English definition sentence",
   "morphemes": [
-    {"type":"prefix","text":"un-","meaningKR":"부정"},
+    {"type":"prefix","text":"un-","meaningKR":"부정의 의미"},
     {"type":"root","text":"believ","meaningKR":"믿다"},
     {"type":"suffix","text":"-able","meaningKR":"~할 수 있는"}
   ],
   "verbForms": {"base":"","past":"","pastParticiple":"","presentParticiple":"","thirdPerson":""},
   "synonyms": [{"word":"","meaningEN":"","example":""}],
   "antonyms": [{"word":"","meaningEN":"","example":""}],
-  "examples": [
-    {"simple":"easy sentence","simpleKR":"한국어 번역","complex":"advanced sentence","complexKR":"한국어 번역"}
-  ]
+  "examples": [{"simple":"","simpleKR":"","complex":"","complexKR":""}]
 }
-- 동사가 아니면 verbForms 모든 필드를 빈 문자열로
-- 형태소가 단순하면 root 하나만
-- synonyms/antonyms는 각 3개씩
-- examples는 1개
 
-단어: ${word}`;
-  
+Rules:
+- pronunciationUS: AMERICAN IPA only (no British)
+- If not a verb, verbForms all empty strings
+- If simple structure, just one root morpheme
+- synonyms/antonyms: 3 each
+- examples: 1 object
+
+Word: ${word}`;
   const body = {
     contents: [{ role: 'user', parts: [{ text: prompt }] }],
     generationConfig: {
-      temperature: 0.4,
-      maxOutputTokens: 1800,
+      temperature: 0.4, maxOutputTokens: 2000,
       responseMimeType: 'application/json'
     }
   };
-  
-  const res = await fetch('/api/gemini', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  });
-  if (!res.ok) throw new Error(`서버 ${res.status}`);
-  const result = await res.json();
+  const result = await callGeminiDirect(body);
   const txt = result.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
   const data = JSON.parse(txt);
-  
   STATE.wordCache[key] = data;
   try { await dbPut('words', { id: key, data, savedAt: Date.now() }); } catch {}
   return data;
@@ -1621,7 +1929,6 @@ async function getWordInfo(word) {
 
 function renderWordData(body, d) {
   body.innerHTML = '';
-  
   const header = document.createElement('div');
   header.className = 'wm-header';
   const wTitle = document.createElement('span');
@@ -1638,39 +1945,35 @@ function renderWordData(body, d) {
   body.appendChild(header);
   
   if (d.lemma && d.lemma.toLowerCase() !== (d.word || '').toLowerCase()) {
-    const lemmaRow = document.createElement('div');
-    lemmaRow.className = 'wm-row';
-    lemmaRow.innerHTML = `<span class="wm-label">기본형</span> <span class="wm-val">${escapeHtml(d.lemma)}</span>`;
-    lemmaRow.appendChild(makePlayBtn(d.lemma, 'en-US'));
-    body.appendChild(lemmaRow);
+    const row = document.createElement('div');
+    row.className = 'wm-row';
+    row.innerHTML = `<span class="wm-label">기본형</span> <span class="wm-val">${escapeHtml(d.lemma)}</span>`;
+    row.appendChild(makePlayBtn(d.lemma, 'en-US'));
+    body.appendChild(row);
   }
-  
   if (d.partOfSpeech) {
-    const posRow = document.createElement('div');
-    posRow.className = 'wm-row';
-    posRow.innerHTML = `<span class="wm-label">품사</span> <span class="wm-val">${escapeHtml(posLabel(d.partOfSpeech))}</span>`;
-    body.appendChild(posRow);
+    const row = document.createElement('div');
+    row.className = 'wm-row';
+    row.innerHTML = `<span class="wm-label">품사</span> <span class="wm-val">${escapeHtml(posLabel(d.partOfSpeech))}</span>`;
+    body.appendChild(row);
   }
-  
   if (d.meaningKR) {
-    const krRow = document.createElement('div');
-    krRow.className = 'wm-row';
-    krRow.innerHTML = `<span class="wm-label">의미</span> <span class="wm-val">${escapeHtml(d.meaningKR)}</span>`;
-    body.appendChild(krRow);
+    const row = document.createElement('div');
+    row.className = 'wm-row';
+    row.innerHTML = `<span class="wm-label">의미</span> <span class="wm-val">${escapeHtml(d.meaningKR)}</span>`;
+    body.appendChild(row);
   }
-  
   if (d.meaningEN) {
-    const enRow = document.createElement('div');
-    enRow.className = 'wm-row wm-en-row';
-    enRow.innerHTML = `<span class="wm-label">English</span>`;
+    const row = document.createElement('div');
+    row.className = 'wm-row wm-en-row';
+    row.innerHTML = `<span class="wm-label">English</span>`;
     const txtWrap = document.createElement('span');
     txtWrap.className = 'wm-val';
     txtWrap.appendChild(renderClickableWords(d.meaningEN));
-    enRow.appendChild(txtWrap);
-    enRow.appendChild(makePlayBtn(d.meaningEN, 'en-US'));
-    body.appendChild(enRow);
+    row.appendChild(txtWrap);
+    row.appendChild(makePlayBtn(d.meaningEN, 'en-US'));
+    body.appendChild(row);
   }
-  
   if (Array.isArray(d.morphemes) && d.morphemes.length) {
     const sec = document.createElement('div');
     sec.className = 'wm-section';
@@ -1683,7 +1986,6 @@ function renderWordData(body, d) {
     });
     body.appendChild(sec);
   }
-  
   if (d.verbForms && Object.values(d.verbForms).some(v => v)) {
     const sec = document.createElement('div');
     sec.className = 'wm-section';
@@ -1703,14 +2005,12 @@ function renderWordData(body, d) {
     });
     body.appendChild(sec);
   }
-  
   if (Array.isArray(d.synonyms) && d.synonyms.length) {
     body.appendChild(renderRelatedSection('유의어', d.synonyms));
   }
   if (Array.isArray(d.antonyms) && d.antonyms.length) {
     body.appendChild(renderRelatedSection('반의어', d.antonyms));
   }
-  
   if (Array.isArray(d.examples) && d.examples.length) {
     const sec = document.createElement('div');
     sec.className = 'wm-section';
@@ -1730,7 +2030,6 @@ function renderRelatedSection(title, items) {
   items.forEach(it => {
     const row = document.createElement('div');
     row.className = 'wm-related';
-    
     const head = document.createElement('div');
     head.className = 'wm-related-head';
     const wSpan = document.createElement('span');
@@ -1740,7 +2039,6 @@ function renderRelatedSection(title, items) {
     head.appendChild(wSpan);
     head.appendChild(makePlayBtn(it.word || '', 'en-US'));
     row.appendChild(head);
-    
     if (it.meaningEN) {
       const meanLine = document.createElement('div');
       meanLine.className = 'wm-related-mean';
@@ -1763,18 +2061,15 @@ function renderRelatedSection(title, items) {
 function renderExampleBlock(label, en, kr) {
   const block = document.createElement('div');
   block.className = 'wm-example';
-  
   const head = document.createElement('div');
   head.className = 'wm-ex-head';
   head.innerHTML = `<span class="wm-ex-label">${label}</span>`;
   block.appendChild(head);
-  
   const enLine = document.createElement('div');
   enLine.className = 'wm-ex-en';
   enLine.appendChild(renderClickableWords(en));
   enLine.appendChild(makePlayBtn(en, 'en-US'));
   block.appendChild(enLine);
-  
   const transBtn = document.createElement('button');
   transBtn.className = 'btn-mini';
   transBtn.textContent = '한국어';
@@ -1783,44 +2078,33 @@ function renderExampleBlock(label, en, kr) {
     if (krLine) { krLine.remove(); krLine = null; return; }
     krLine = document.createElement('div');
     krLine.className = 'wm-ex-kr';
-    if (kr) {
-      krLine.textContent = kr;
-    } else {
+    if (kr) krLine.textContent = kr;
+    else {
       krLine.textContent = '번역 중...';
-      try {
-        const translated = await quickTranslate(en);
-        krLine.textContent = translated;
-      } catch {
-        krLine.textContent = '번역 실패';
-      }
+      try { krLine.textContent = await quickTranslate(en); }
+      catch { krLine.textContent = '번역 실패'; }
     }
     block.appendChild(krLine);
   };
   head.appendChild(transBtn);
-  
   return block;
 }
 
 async function quickTranslate(en) {
   const body = {
-    contents: [{ role: 'user', parts: [{ text: `다음 영어 문장을 자연스러운 한국어로 번역만 출력하세요 (다른 설명 없이):\n${en}` }] }],
+    contents: [{ role: 'user', parts: [{ text: `Translate to natural Korean only (no other text):\n${en}` }] }],
     generationConfig: { temperature: 0.3, maxOutputTokens: 512 }
   };
-  const res = await fetch('/api/gemini', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  });
-  if (!res.ok) throw new Error(`${res.status}`);
-  const r = await res.json();
+  const r = await callGeminiDirect(body);
   return r.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
 }
 
-/* ---------- 따라읽기 ---------- */
+/* ============================================================
+   따라읽기
+   ============================================================ */
 function startFollowRead(s, card) {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) { toast('이 브라우저는 음성 인식을 지원하지 않습니다'); return; }
-  
   const slot = card.querySelector('.sentence-slot');
   let resultBox = slot.querySelector('.follow-box');
   if (resultBox) resultBox.remove();
@@ -1828,12 +2112,10 @@ function startFollowRead(s, card) {
   resultBox.className = 'follow-box';
   resultBox.innerHTML = '<div class="loading-mini">듣는 중... 문장을 읽으세요</div>';
   slot.appendChild(resultBox);
-  
   const rec = new SR();
   rec.lang = 'en-US';
   rec.interimResults = false;
   rec.maxAlternatives = 1;
-  
   rec.onresult = (e) => {
     const spoken = e.results[0][0].transcript;
     showFollowReadResult(resultBox, s.text, spoken);
@@ -1841,91 +2123,184 @@ function startFollowRead(s, card) {
   rec.onerror = (e) => {
     resultBox.innerHTML = `<div class="follow-err">인식 오류: ${e.error}</div>`;
   };
-  
   try { rec.start(); }
   catch (err) { resultBox.innerHTML = `<div class="follow-err">${err.message}</div>`; }
 }
-
 function showFollowReadResult(box, original, spoken) {
   const origTokens = original.toLowerCase().replace(/[.,!?;:"'()]/g, '').split(/\s+/).filter(Boolean);
   const spokenTokens = spoken.toLowerCase().replace(/[.,!?;:"'()]/g, '').split(/\s+/).filter(Boolean);
   const spokenSet = new Set(spokenTokens);
   let correct = 0;
-  
   const html = origTokens.map(t => {
     const ok = spokenSet.has(t);
     if (ok) correct++;
     return `<span class="${ok ? 'fr-ok' : 'fr-no'}">${escapeHtml(t)}</span>`;
   }).join(' ');
-  
   const pct = origTokens.length > 0 ? Math.round((correct / origTokens.length) * 100) : 0;
-  box.innerHTML = `
-    <div class="fr-score">정확도 ${pct}%</div>
+  box.innerHTML = `<div class="fr-score">정확도 ${pct}%</div>
     <div class="fr-spoken">인식: ${escapeHtml(spoken)}</div>
     <div class="fr-compare">${html}</div>`;
 }
 
-/* ---------- 문서 ---------- */
+/* ============================================================
+   문서 목록 (검색/정렬/선택삭제/일괄삭제/원본보기)
+   ============================================================ */
 async function refreshDocList() {
   const list = $('#docList');
   if (!list) return;
   list.innerHTML = '';
   try {
-    const docs = await dbAll('documents');
-    docs.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
-    docs.forEach(doc => {
-      const item = document.createElement('div');
-      item.className = 'doc-item';
-      const isPartial = !doc.sentences || doc.sentences.length === 0;
-      item.innerHTML = `
-        <div class="doc-title">${escapeHtml(doc.title || '제목 없음')}${isPartial ? ' <span class="doc-badge">부분</span>' : ''}</div>
-        <div class="doc-meta">${escapeHtml(doc.sourceType || '')} · ${(doc.sentences || []).length}문장</div>`;
-      item.onclick = () => openDocument(doc.id);
-      const del = document.createElement('button');
-      del.className = 'btn-mini doc-del';
-      del.textContent = '삭제';
-      del.onclick = (e) => { e.stopPropagation(); deleteDocument(doc.id); };
-      item.appendChild(del);
-      list.appendChild(item);
-    });
+    let docs = await dbAll('documents');
+    // 검색 필터
+    if (STATE.docSearch) {
+      const q = STATE.docSearch.toLowerCase();
+      docs = docs.filter(d =>
+        (d.title || '').toLowerCase().includes(q) ||
+        (d.fullText || '').toLowerCase().includes(q)
+      );
+    }
+    // 정렬
+    if (STATE.docSort === 'name') {
+      docs.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+    } else {
+      docs.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+    }
+    if (docs.length === 0) {
+      list.innerHTML = '<div class="loading-mini">저장된 문서가 없습니다</div>';
+      return;
+    }
+    docs.forEach(doc => list.appendChild(renderDocItem(doc)));
   } catch (err) {
     console.error('doc list', err);
+  }
+}
+
+function renderDocItem(doc) {
+  const item = document.createElement('div');
+  item.className = 'doc-item';
+  
+  const cb = document.createElement('input');
+  cb.type = 'checkbox';
+  cb.checked = STATE.docSelected.has(doc.id);
+  cb.onchange = () => {
+    if (cb.checked) STATE.docSelected.add(doc.id);
+    else STATE.docSelected.delete(doc.id);
+  };
+  item.appendChild(cb);
+  
+  const body = document.createElement('div');
+  body.className = 'doc-item-body';
+  const isPartial = !doc.sentences || doc.sentences.length === 0;
+  body.innerHTML = `
+    <div class="doc-title">${escapeHtml(doc.title || '제목 없음')}${isPartial ? ' <span class="doc-badge">부분</span>' : ''}</div>
+    <div class="doc-meta">${escapeHtml(doc.sourceType || '')} · ${(doc.sentences || []).length}문장 · ${new Date(doc.createdAt || 0).toLocaleDateString('ko-KR')}</div>
+  `;
+  body.onclick = () => openDocument(doc.id);
+  item.appendChild(body);
+  
+  const actions = document.createElement('div');
+  actions.className = 'doc-actions';
+  actions.style.flexBasis = '100%';
+  
+  const playAllBtn = document.createElement('button');
+  playAllBtn.textContent = '전체재생';
+  playAllBtn.onclick = (e) => { e.stopPropagation(); playAllSentences(doc); };
+  actions.appendChild(playAllBtn);
+  
+  if (doc.fileName) {
+    const fileBtn = document.createElement('button');
+    fileBtn.textContent = '원본보기';
+    fileBtn.onclick = (e) => { e.stopPropagation(); viewOriginalFile(doc.id); };
+    actions.appendChild(fileBtn);
+  }
+  
+  const delBtn = document.createElement('button');
+  delBtn.textContent = '삭제';
+  delBtn.onclick = (e) => { e.stopPropagation(); deleteDocument(doc.id); };
+  actions.appendChild(delBtn);
+  
+  item.appendChild(actions);
+  return item;
+}
+
+let playAllState = { active: false, cancel: null };
+async function playAllSentences(doc) {
+  if (playAllState.active) {
+    playAllState.active = false;
+    stopSpeaking();
+    toast('재생 중지');
+    return;
+  }
+  const sentences = doc.sentences || [];
+  if (sentences.length === 0) { toast('재생할 문장이 없습니다'); return; }
+  playAllState.active = true;
+  const useOriginal = doc.videoId && doc.segments?.length > 0;
+  if (useOriginal) initYouTubePlayer(doc.videoId);
+  
+  for (const s of sentences) {
+    if (!playAllState.active) break;
+    await new Promise(resolve => {
+      let seg = null;
+      if (useOriginal && doc.segments) {
+        const target = s.text.toLowerCase().slice(0, 15);
+        seg = doc.segments.find(sg => sg.text.toLowerCase().includes(target));
+      }
+      if (seg && STATE.ytPlayer) {
+        playOriginal(seg.start, seg.end, resolve);
+      } else {
+        speak(s.text, { onEnd: resolve });
+      }
+    });
+  }
+  playAllState.active = false;
+}
+
+async function viewOriginalFile(docId) {
+  try {
+    const fileRec = await dbGet('files', docId);
+    if (!fileRec || !fileRec.blob) {
+      toast('원본 파일이 저장되어 있지 않습니다');
+      return;
+    }
+    const url = URL.createObjectURL(fileRec.blob);
+    window.open(url, '_blank');
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  } catch (err) {
+    toast('파일 열기 실패: ' + err.message);
   }
 }
 
 async function openDocument(docId) {
   const doc = await dbGet('documents', docId);
   if (!doc) return;
-  
   STATE.analyzing = false;
-  STATE.chunkQueue = [];
   stopSpeaking();
-  
+  resetActivePlayBtn();
   const progressCard = $('#progressCard'); if (progressCard) progressCard.style.display = 'none';
-  const progressBar = $('#progressBar'); if (progressBar) progressBar.style.width = '0%';
-  const progressText = $('#progressText'); if (progressText) progressText.textContent = '';
   const container = $('#sentenceList'); if (container) container.innerHTML = '';
-  
   STATE.sentences = doc.sentences || [];
   STATE.currentDocId = doc.id;
   STATE.currentVideoId = doc.videoId || null;
   STATE.ytSegments = doc.segments || [];
   STATE.sourceType = doc.sourceType || 'text';
-  
-  if (doc.videoId && doc.segments?.length) {
-    initYouTubePlayer(doc.videoId);
-  }
-  
-  STATE.sentences.forEach(s => renderSentenceBlock(s));
-  
+  STATE.currentFullText = doc.fullText || '';
+  if (doc.videoId && doc.segments?.length) initYouTubePlayer(doc.videoId);
+  STATE.sentences.forEach(s => {
+    if (!s.number) s.number = s.index + 1;
+    renderSentenceBlock(s);
+  });
   const side = $('#sidePanel'); if (side) side.classList.remove('open');
   updateOriginalModeAvailability();
+  const saveBtn = $('#saveBtn');
+  if (saveBtn) saveBtn.style.display = 'inline-block';
   setStatus(`문서 열기 완료 (${STATE.sentences.length}문장)`);
 }
 
 async function deleteDocument(docId) {
-  if (!confirm('문서를 삭제하시겠습니까?')) return;
+  if (!confirm('이 문서를 삭제하시겠습니까?')) return;
   await dbDelete('documents', docId);
+  try { await dbDelete('files', docId); } catch {}
+  STATE.docSelected.delete(docId);
   if (STATE.currentDocId === docId) {
     const container = $('#sentenceList'); if (container) container.innerHTML = '';
     STATE.sentences = [];
@@ -1933,8 +2308,59 @@ async function deleteDocument(docId) {
   }
   refreshDocList();
 }
+async function deleteSelectedDocs() {
+  if (STATE.docSelected.size === 0) { toast('선택된 문서가 없습니다'); return; }
+  if (!confirm(`선택된 ${STATE.docSelected.size}개 문서를 삭제하시겠습니까?`)) return;
+  for (const id of Array.from(STATE.docSelected)) {
+    await dbDelete('documents', id);
+    try { await dbDelete('files', id); } catch {}
+  }
+  STATE.docSelected.clear();
+  refreshDocList();
+}
+async function deleteAllDocs() {
+  if (!confirm('모든 문서를 삭제하시겠습니까?')) return;
+  const all = await dbAll('documents');
+  for (const d of all) {
+    await dbDelete('documents', d.id);
+    try { await dbDelete('files', d.id); } catch {}
+  }
+  STATE.docSelected.clear();
+  if (STATE.currentDocId) {
+    const container = $('#sentenceList'); if (container) container.innerHTML = '';
+    STATE.sentences = [];
+    STATE.currentDocId = null;
+  }
+  refreshDocList();
+}
+async function selectAllVisible() {
+  const docs = await dbAll('documents');
+  let filtered = docs;
+  if (STATE.docSearch) {
+    const q = STATE.docSearch.toLowerCase();
+    filtered = filtered.filter(d => (d.title || '').toLowerCase().includes(q));
+  }
+  filtered.forEach(d => STATE.docSelected.add(d.id));
+  refreshDocList();
+}
 
-/* ---------- 맨 위로 ---------- */
+/* ============================================================
+   저장 / 맨위로 / 폰트 / 속도 / 성별
+   ============================================================ */
+async function manualSave() {
+  if (!STATE.currentDocId) { toast('저장할 문서가 없습니다'); return; }
+  const doc = await dbGet('documents', STATE.currentDocId);
+  if (!doc) { toast('문서를 찾을 수 없습니다'); return; }
+  const newTitle = prompt('저장할 제목', doc.title || '');
+  if (newTitle === null) return;
+  doc.title = newTitle.trim() || doc.title;
+  doc.sentences = STATE.sentences;
+  doc.updatedAt = new Date().toISOString();
+  await dbPut('documents', doc);
+  toast('저장되었습니다');
+  refreshDocList();
+}
+
 function setupScrollTop() {
   let btn = $('#scrollTopBtn');
   if (!btn) {
@@ -1952,68 +2378,87 @@ function setupScrollTop() {
   });
 }
 
-/* ---------- 폰트 ---------- */
 function setFontSize(n) {
   const size = Math.min(28, Math.max(12, n));
   STATE.fontSize = size;
   document.documentElement.style.setProperty('--base', `${size}px`);
   try { localStorage.setItem('fontSize', String(size)); } catch {}
   const label = $('#fontSizeLabel');
-  if (label) label.textContent = `${size}px`;
+  if (label) label.textContent = String(size);
 }
 
-/* ---------- UI 바인딩 ---------- */
+const SPEED_OPTIONS = [0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2];
+function renderSpeedGrid() {
+  const grid = $('#speedGrid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  SPEED_OPTIONS.forEach(v => {
+    const btn = document.createElement('button');
+    btn.className = 'speed-btn' + (Math.abs(v - STATE.speed) < 0.01 ? ' active' : '');
+    btn.textContent = `${v.toFixed(1)}x`;
+    btn.onclick = () => {
+      STATE.speed = v;
+      try { localStorage.setItem('speed', String(v)); } catch {}
+      const t = $('#speedTitle'); if (t) t.textContent = `재생 속도: ${v.toFixed(1)}x`;
+      renderSpeedGrid();
+      applyPlaybackChange();
+    };
+    grid.appendChild(btn);
+  });
+}
+
+function setGender(g) {
+  STATE.voiceGender = g;
+  try { localStorage.setItem('voiceGender', g); } catch {}
+
+  $$('#genderToggle button').forEach(b => {
+    b.classList.toggle('active', b.dataset.gender === g);
+  });
+  // 즉시 보이스 재선택 후 샘플 재생
+  loadVoices();
+  speak('Hello, this is your selected voice.', { lang: 'en-US' });
+}
+
+/* ============================================================
+   UI 바인딩
+   ============================================================ */
 function bindUI() {
-  const analyzeBtn = $('#analyzeBtn');
-  if (analyzeBtn) analyzeBtn.onclick = handleAnalyze;
-  
-  const fileInput = $('#fileInput');
-  if (fileInput) fileInput.onchange = e => handleFile(e.target.files[0]);
-  
-  const hamburger = $('#hamburgerBtn');
-  if (hamburger) hamburger.onclick = () => $('#sidePanel')?.classList.toggle('open');
-  
-  const closeSide = $('#sidePanelClose');
-  if (closeSide) closeSide.onclick = () => $('#sidePanel')?.classList.remove('open');
-  
-  const cancelBtn = $('#cancelBtn');
-  if (cancelBtn) cancelBtn.onclick = () => {
+  $('#analyzeBtn')?.addEventListener('click', handleAnalyze);
+  $('#fileInput')?.addEventListener('change', e => handleFile(e.target.files[0]));
+  $('#hamburgerBtn')?.addEventListener('click', () => $('#sidePanel')?.classList.toggle('open'));
+  $('#sidePanelClose')?.addEventListener('click', () => $('#sidePanel')?.classList.remove('open'));
+  $('#cancelBtn')?.addEventListener('click', () => {
     STATE.analyzing = false;
-    STATE.chunkQueue = [];
     hideProgress();
     setStatus('분석 취소됨');
-  };
-  
-  const fontPlus = $('#fontPlus');
-  const fontMinus = $('#fontMinus');
-  if (fontPlus) fontPlus.onclick = () => setFontSize(STATE.fontSize + 2);
-  if (fontMinus) fontMinus.onclick = () => setFontSize(STATE.fontSize - 2);
-  
-  const voiceMode = $('#voiceModeSelect');
-  if (voiceMode) voiceMode.onchange = e => {
+  });
+  $('#saveBtn')?.addEventListener('click', manualSave);
+  $('#fontPlus')?.addEventListener('click', () => setFontSize(STATE.fontSize + 2));
+  $('#fontMinus')?.addEventListener('click', () => setFontSize(STATE.fontSize - 2));
+  $('#voiceModeSelect')?.addEventListener('change', e => {
     STATE.voiceMode = e.target.value;
     updateOriginalModeAvailability();
-  };
+  });
+
+  $$('#genderToggle button').forEach(b => {
+    b.addEventListener('click', () => setGender(b.dataset.gender));
+  });
+  $('#koreanModeToggle')?.addEventListener('change', e => toggleKoreanMode(e.target.checked));
+  $('#koreanAudioInput')?.addEventListener('change', e => handleKoreanAudioUpload(e.target.files[0]));
+  $('#recStartBtn')?.addEventListener('click', startRecording);
+  $('#recStopBtn')?.addEventListener('click', stopRecording);
   
-  const gender = $('#voiceGenderSelect');
-  if (gender) gender.onchange = e => { STATE.voiceGender = e.target.value; };
-  
-  const speed = $('#speedSelect');
-  if (speed) speed.onchange = e => {
-    STATE.speed = parseFloat(e.target.value);
-    applyPlaybackChange();
-  };
-  
-  const krToggle = $('#koreanModeToggle');
-  if (krToggle) krToggle.onchange = e => toggleKoreanMode(e.target.checked);
-  
-  const krFile = $('#koreanAudioInput');
-  if (krFile) krFile.onchange = e => handleKoreanAudioUpload(e.target.files[0]);
-  
-  const recStart = $('#recStartBtn');
-  const recStop = $('#recStopBtn');
-  if (recStart) recStart.onclick = startRecording;
-  if (recStop) recStop.onclick = stopRecording;
+  $('#docSearch')?.addEventListener('input', e => {
+    STATE.docSearch = e.target.value;
+    refreshDocList();
+  });
+  $('#docSort')?.addEventListener('change', e => {
+    STATE.docSort = e.target.value;
+    refreshDocList();
+  });
+  $('#docSelectAll')?.addEventListener('click', selectAllVisible);
+  $('#docDeleteSelected')?.addEventListener('click', deleteSelectedDocs);
+  $('#docDeleteAll')?.addEventListener('click', deleteAllDocs);
   
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
@@ -2024,28 +2469,43 @@ function bindUI() {
   });
 }
 
-/* ---------- 초기화 ---------- */
+/* ============================================================
+   초기화
+   ============================================================ */
 async function init() {
   try {
     const saved = parseInt(localStorage.getItem('fontSize') || '16', 10);
     setFontSize(saved);
   } catch { setFontSize(16); }
+  try {
+    const sp = parseFloat(localStorage.getItem('speed') || '1.0');
+    if (SPEED_OPTIONS.some(v => Math.abs(v - sp) < 0.01)) STATE.speed = sp;
+  } catch {}
+  try {
+    const g = localStorage.getItem('voiceGender') || 'female';
+    STATE.voiceGender = g;
+  } catch {}
   
   bindUI();
   setupScrollTop();
   ensureModalRoot();
+  renderSpeedGrid();
+  $('#speedTitle').textContent = `재생 속도: ${STATE.speed.toFixed(1)}x`;
+
+  $$('#genderToggle button').forEach(b => b.classList.toggle('active', b.dataset.gender === STATE.voiceGender));
   
   try { await dbOpen(); } catch (err) { console.error('DB open:', err); }
-  
   try {
     const res = await fetch('/api/health');
     const data = await res.json();
-    setStatus(`준비됨 (키 ${data.keyCount}개, ${data.model})`);
+    setStatus(`서버 연결됨 (키 ${data.keyCount}개)`);
   } catch {
     setStatus('서버 연결 실패');
   }
-  
-  try { warmupTTS(); } catch {}
+  try { warmupTTS(); loadVoices(); } catch {}
+  // 보이스 로딩이 늦을 수 있어 한 번 더 시도
+  setTimeout(() => loadVoices(), 500);
+  setTimeout(() => loadVoices(), 1500);
   
   refreshDocList();
   updateOriginalModeAvailability();

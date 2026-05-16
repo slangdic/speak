@@ -1,7 +1,7 @@
 // THINKING SKILLS — Cloudflare Pages Advanced Mode 단일 워커
 // 라우팅: /api/gemini, /api/youtube, /api/health → 동적 처리
-//        그 외 → 정적 자산(index.html 등) 패스스루
-// 환경변수: GEMINI_API_KEY_1, GEMINI_API_KEY_2, ... 자동 수집 (확장 가능)
+//        그 외 → 정적 자산 패스스루
+// 환경변수: GEMINI_API_KEY_1, GEMINI_API_KEY_2, ... 자동 수집
 
 const MODEL = 'gemini-2.5-flash';
 const API_BASE = 'https://generativelanguage.googleapis.com/v1beta';
@@ -10,12 +10,9 @@ let keyCursor = 0;
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
-
-    // CORS preflight
     if (request.method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: corsHeaders() });
     }
-
     try {
       if (url.pathname === '/api/gemini' && request.method === 'POST') {
         return withCORS(await handleGemini(request, env));
@@ -26,13 +23,9 @@ export default {
       if (url.pathname === '/api/health') {
         const keys = collectKeys(env);
         return withCORS(new Response(JSON.stringify({
-          ok: true,
-          model: MODEL,
-          keyCount: keys.length,
-          time: new Date().toISOString()
+          ok: true, model: MODEL, keyCount: keys.length, time: new Date().toISOString()
         }), { headers: { 'Content-Type': 'application/json; charset=utf-8' } }));
       }
-      // 정적 자산 (index.html 등)
       return env.ASSETS.fetch(request);
     } catch (e) {
       return withCORS(jsonError(500, 'Worker exception: ' + (e?.message || String(e))));
@@ -41,7 +34,7 @@ export default {
 };
 
 /* ============================================================
-   /api/gemini — Gemini API 프록시 (키 라운드로빈, 스트리밍 지원)
+   /api/gemini — Gemini API 프록시
    ============================================================ */
 async function handleGemini(request, env) {
   let body;
@@ -56,9 +49,7 @@ async function handleGemini(request, env) {
 
   const payload = { contents };
   payload.generationConfig = generationConfig || {
-    temperature: 0.7,
-    maxOutputTokens: 8192,
-    responseMimeType: 'application/json'
+    temperature: 0.7, maxOutputTokens: 8192, responseMimeType: 'application/json'
   };
   if (systemInstruction) payload.systemInstruction = systemInstruction;
 
@@ -66,53 +57,50 @@ async function handleGemini(request, env) {
   const queryExtra = stream ? '?alt=sse' : '';
 
   let lastError = null;
-  for (let i = 0; i < keys.length; i++) {
-    const keyIndex = (keyCursor + i) % keys.length;
-    const key = keys[keyIndex];
-    const apiUrl = `${API_BASE}/models/${MODEL}:${endpoint}${queryExtra}`;
-    try {
-      const upstream = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-goog-api-key': key
-        },
-        body: JSON.stringify(payload),
-      });
-
-      // 429 / 5xx → 다음 키로 회전
-      if (upstream.status === 429 || upstream.status >= 500) {
-        lastError = `Key ${keyIndex + 1} status ${upstream.status}`;
-        continue;
-      }
-      if (!upstream.ok) {
-        const errText = await upstream.text();
-        return jsonError(upstream.status, `Gemini error: ${errText.slice(0, 500)}`);
-      }
-
-      keyCursor = (keyIndex + 1) % keys.length;
-
-      if (stream) {
-        return new Response(upstream.body, {
-          status: 200,
-          headers: {
-            'Content-Type': 'text/event-stream; charset=utf-8',
-            'Cache-Control': 'no-cache',
-            'X-Used-Key-Index': String(keyIndex + 1)
-          }
+  // 2라운드 시도 (429 누적 시 30초 대기 후 재시도)
+  for (let round = 0; round < 2; round++) {
+    if (round > 0) await sleep(30000);
+    for (let i = 0; i < keys.length; i++) {
+      const keyIndex = (keyCursor + i) % keys.length;
+      const key = keys[keyIndex];
+      const apiUrl = `${API_BASE}/models/${MODEL}:${endpoint}${queryExtra}`;
+      try {
+        const upstream = await fetch(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+          body: JSON.stringify(payload),
         });
-      } else {
-        const data = await upstream.json();
-        return new Response(JSON.stringify(data), {
-          status: 200,
-          headers: {
-            'Content-Type': 'application/json; charset=utf-8',
-            'X-Used-Key-Index': String(keyIndex + 1)
-          }
-        });
+        if (upstream.status === 429 || upstream.status >= 500) {
+          lastError = `Key ${keyIndex + 1} status ${upstream.status}`;
+          continue;
+        }
+        if (!upstream.ok) {
+          const errText = await upstream.text();
+          return jsonError(upstream.status, `Gemini error: ${errText.slice(0, 500)}`);
+        }
+        keyCursor = (keyIndex + 1) % keys.length;
+        if (stream) {
+          return new Response(upstream.body, {
+            status: 200,
+            headers: {
+              'Content-Type': 'text/event-stream; charset=utf-8',
+              'Cache-Control': 'no-cache',
+              'X-Used-Key-Index': String(keyIndex + 1)
+            }
+          });
+        } else {
+          const data = await upstream.json();
+          return new Response(JSON.stringify(data), {
+            status: 200,
+            headers: {
+              'Content-Type': 'application/json; charset=utf-8',
+              'X-Used-Key-Index': String(keyIndex + 1)
+            }
+          });
+        }
+      } catch (e) {
+        lastError = `Key ${keyIndex + 1} exception: ${e.message}`;
       }
-    } catch (e) {
-      lastError = `Key ${keyIndex + 1} exception: ${e.message}`;
     }
   }
   return jsonError(503, `All Gemini keys failed. Last: ${lastError}`);
@@ -130,9 +118,11 @@ async function handleYouTube(request, env) {
   const videoId = extractVideoId(ytUrl);
   if (!videoId) return jsonError(400, 'Invalid YouTube URL');
 
+  // Shorts/embed/live URL을 표준 watch URL로 정규화
+  const normalizedUrl = `https://www.youtube.com/watch?v=${videoId}`;
   const errors = [];
 
-  // 1차: 자막 트랙 추출
+  // 1차: timedtext 직접 호출
   try {
     const captions = await fetchCaptions(videoId);
     if (captions && captions.segments && captions.segments.length > 0) {
@@ -149,14 +139,14 @@ async function handleYouTube(request, env) {
     errors.push('captions: ' + e.message);
   }
 
-  // 2차: Gemini 영상 직접 전사
+  // 2차: Gemini 영상 직접 전사 (정규화된 URL 사용)
   try {
     const keys = collectKeys(env);
     if (keys.length === 0) {
       errors.push('gemini: no API keys');
       return jsonError(500, debug ? errors.join(' | ') : 'No API keys configured');
     }
-    const text = await transcribeWithGemini(ytUrl, keys);
+    const text = await transcribeWithGemini(normalizedUrl, keys);
     if (!text || text.trim().length < 10) {
       errors.push('gemini: empty transcript');
       return jsonError(502, debug ? errors.join(' | ') : 'Transcription empty');
@@ -179,94 +169,51 @@ function extractVideoId(url) {
 }
 
 async function fetchCaptions(videoId) {
-  // 1) timedtext 직접 호출 (여러 언어 시도)
-  const langs = ['en', 'ko', 'en-US', 'en-GB'];
-  for (const lang of langs) {
+  // timedtext 다양한 파라미터 조합 시도 (watch 페이지 스크레이핑은 차단 빈발로 제거)
+  const attempts = [
+    { lang: 'en', kind: '', fmt: 'srv3' },
+    { lang: 'en', kind: '', fmt: '' },
+    { lang: 'en', kind: 'asr', fmt: 'srv3' },
+    { lang: 'en', kind: 'asr', fmt: '' },
+    { lang: 'ko', kind: '', fmt: 'srv3' },
+    { lang: 'ko', kind: '', fmt: '' },
+    { lang: 'ko', kind: 'asr', fmt: 'srv3' },
+    { lang: 'ko', kind: 'asr', fmt: '' },
+    { lang: 'en-US', kind: '', fmt: 'srv3' },
+    { lang: 'en-GB', kind: '', fmt: 'srv3' },
+  ];
+  const uaList = [
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
+    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36'
+  ];
+
+  for (let i = 0; i < attempts.length; i++) {
+    const a = attempts[i];
     try {
-      const directUrl = `https://www.youtube.com/api/timedtext?lang=${lang}&v=${videoId}`;
-      const r = await fetch(directUrl, {
+      const params = new URLSearchParams({ lang: a.lang, v: videoId });
+      if (a.kind) params.set('kind', a.kind);
+      if (a.fmt) params.set('fmt', a.fmt);
+      const url = `https://www.youtube.com/api/timedtext?${params.toString()}`;
+      const r = await fetch(url, {
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36'
+          'User-Agent': uaList[i % uaList.length],
+          'Accept-Language': 'en-US,en;q=0.9',
+          'Accept': 'text/xml,application/xml;q=0.9,*/*;q=0.8'
         }
       });
       if (r.ok) {
         const xml = await r.text();
-        if (xml && xml.includes('<text')) {
-          const seg = parseCaptionXml(xml);
-          if (seg.length > 0) return { language: lang, segments: seg };
+        if (xml && (xml.includes('<text') || xml.includes('<p '))) {
+          const seg = a.fmt === 'srv3' ? parseSrv3Xml(xml) : parseCaptionXml(xml);
+          if (seg.length > 0) {
+            return { language: a.lang + (a.kind ? '-' + a.kind : ''), segments: seg };
+          }
         }
       }
-    } catch (e) { /* 다음 언어 시도 */ }
+    } catch { /* 다음 시도 */ }
   }
-
-  // 2) ASR (자동 생성 자막) 시도
-  for (const lang of ['en', 'ko']) {
-    try {
-      const asrUrl = `https://www.youtube.com/api/timedtext?lang=${lang}&v=${videoId}&kind=asr`;
-      const r = await fetch(asrUrl, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36'
-        }
-      });
-      if (r.ok) {
-        const xml = await r.text();
-        if (xml && xml.includes('<text')) {
-          const seg = parseCaptionXml(xml);
-          if (seg.length > 0) return { language: lang + '-asr', segments: seg };
-        }
-      }
-    } catch (e) { /* 다음 시도 */ }
-  }
-
-  // 3) watch 페이지 스크레이프 폴백 (429에 취약)
-  try {
-    const watchUrl = `https://www.youtube.com/watch?v=${videoId}&hl=en&persist_hl=1`;
-    const res = await fetch(watchUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Cookie': 'CONSENT=YES+1; PREF=hl=en'
-      }
-    });
-    if (!res.ok) throw new Error(`Watch page status ${res.status}`);
-    const html = await res.text();
-
-    let tracks = null;
-    const reList = [
-      /"captionTracks":\s*(\[[^\]]*?\])/,
-      /\\"captionTracks\\":\s*(\[[^\]]*?\])/
-    ];
-    for (const re of reList) {
-      const m = html.match(re);
-      if (m) {
-        let raw = m[1];
-        if (raw.includes('\\"')) raw = raw.replace(/\\"/g, '"').replace(/\\\\/g, '\\');
-        try { tracks = JSON.parse(raw); break; } catch (_) { /* try next */ }
-      }
-    }
-    if (!tracks || !Array.isArray(tracks) || tracks.length === 0) return null;
-
-    const pick = tracks.find(t => /^en/i.test(t.languageCode || ''))
-              || tracks.find(t => /^ko/i.test(t.languageCode || ''))
-              || tracks[0];
-    let baseUrl = pick.baseUrl;
-    if (!baseUrl) return null;
-    baseUrl = baseUrl.replace(/\\u0026/g, '&').replace(/\\\//g, '/');
-
-    const capRes = await fetch(baseUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
-        'Accept-Language': 'en-US,en;q=0.9'
-      }
-    });
-    if (!capRes.ok) throw new Error(`Caption XML status ${capRes.status}`);
-    const xml = await capRes.text();
-    const seg = parseCaptionXml(xml);
-    return { language: pick.languageCode, segments: seg };
-  } catch (e) {
-    throw e;
-  }
+  return null;
 }
 
 function parseCaptionXml(xml) {
@@ -285,13 +232,27 @@ function parseCaptionXml(xml) {
   return segments;
 }
 
+function parseSrv3Xml(xml) {
+  // srv3 포맷: <p t="시작ms" d="지속ms">...<s>텍스트</s>...</p>
+  const segments = [];
+  const regex = /<p\s+t="(\d+)"\s+d="(\d+)"[^>]*>([\s\S]*?)<\/p>/g;
+  let m;
+  while ((m = regex.exec(xml)) !== null) {
+    const start = parseInt(m[1], 10) / 1000;
+    const dur = parseInt(m[2], 10) / 1000;
+    const inner = m[3];
+    const text = decodeEntities(inner.replace(/<[^>]+>/g, ''))
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (text) segments.push({ start, end: start + dur, text });
+  }
+  return segments;
+}
+
 function decodeEntities(s) {
   return s
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"').replace(/&#39;/g, "'")
     .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(parseInt(n, 10)));
 }
 
@@ -308,36 +269,36 @@ async function transcribeWithGemini(ytUrl, keys) {
   };
 
   let lastError = null;
-  for (let i = 0; i < keys.length; i++) {
-    const keyIndex = (keyCursor + i) % keys.length;
-    const key = keys[keyIndex];
-    const apiUrl = `${API_BASE}/models/${MODEL}:generateContent`;
-    try {
-      const r = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-goog-api-key': key
-        },
-        body: JSON.stringify(payload)
-      });
-      if (r.status === 429 || r.status >= 500) {
-        lastError = `Key ${keyIndex + 1} status ${r.status}`;
-        continue;
+  for (let round = 0; round < 2; round++) {
+    if (round > 0) await sleep(30000);
+    for (let i = 0; i < keys.length; i++) {
+      const keyIndex = (keyCursor + i) % keys.length;
+      const key = keys[keyIndex];
+      const apiUrl = `${API_BASE}/models/${MODEL}:generateContent`;
+      try {
+        const r = await fetch(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+          body: JSON.stringify(payload)
+        });
+        if (r.status === 429 || r.status >= 500) {
+          lastError = `Key ${keyIndex + 1} status ${r.status}`;
+          continue;
+        }
+        if (!r.ok) {
+          const errText = await r.text();
+          lastError = `Gemini ${r.status}: ${errText.slice(0, 300)}`;
+          continue;
+        }
+        const data = await r.json();
+        keyCursor = (keyIndex + 1) % keys.length;
+        const text = data?.candidates?.[0]?.content?.parts
+          ?.map(p => p.text).filter(Boolean).join('\n') || '';
+        if (text) return text;
+        lastError = `Key ${keyIndex + 1}: empty response`;
+      } catch (e) {
+        lastError = `Key ${keyIndex + 1} exception: ${e.message}`;
       }
-      if (!r.ok) {
-        const errText = await r.text();
-        lastError = `Gemini ${r.status}: ${errText.slice(0, 300)}`;
-        continue;
-      }
-      const data = await r.json();
-      keyCursor = (keyIndex + 1) % keys.length;
-      const text = data?.candidates?.[0]?.content?.parts
-        ?.map(p => p.text).filter(Boolean).join('\n') || '';
-      if (text) return text;
-      lastError = `Key ${keyIndex + 1}: empty response`;
-    } catch (e) {
-      lastError = `Key ${keyIndex + 1} exception: ${e.message}`;
     }
   }
   throw new Error(lastError || 'unknown');
@@ -359,6 +320,8 @@ function collectKeys(env) {
   return indexed.map(x => x.key);
 }
 
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
 function corsHeaders() {
   return {
     'Access-Control-Allow-Origin': '*',
@@ -373,15 +336,12 @@ function withCORS(response) {
   const cors = corsHeaders();
   for (const [k, v] of Object.entries(cors)) headers.set(k, v);
   return new Response(response.body, {
-    status: response.status,
-    statusText: response.statusText,
-    headers
+    status: response.status, statusText: response.statusText, headers
   });
 }
 
 function jsonError(status, message) {
   return new Response(JSON.stringify({ error: message }), {
-    status,
-    headers: { 'Content-Type': 'application/json; charset=utf-8' }
+    status, headers: { 'Content-Type': 'application/json; charset=utf-8' }
   });
 }

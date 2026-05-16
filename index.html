@@ -415,6 +415,9 @@
 </script>
 
 <script type="module">
+/* ============================================================
+   STATE
+   ============================================================ */
 const STATE = {
   baseFontSize: 16,
   voiceMode: 'tts',
@@ -425,6 +428,7 @@ const STATE = {
   progress: { done: 0, total: 0, paused: false, cancelled: false },
   voices: { female: null, male: null, loaded: false },
   wordCache: new Map(),
+  ttsPreloadQueue: new Map(),
   ytPlayer: null,
   ytSegments: [],
 };
@@ -432,6 +436,63 @@ const STATE = {
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
 
+/* ============================================================
+   글로벌 Gemini 호출 큐 — 분당 한도 보호
+   ============================================================ */
+const GEMINI_QUEUE = {
+  queue: [],
+  busy: false,
+  minIntervalMs: 7000,
+  lastCallAt: 0,
+};
+
+async function callGemini(body, priority = false) {
+  return new Promise((resolve, reject) => {
+    const task = { body, resolve, reject };
+    if (priority) GEMINI_QUEUE.queue.unshift(task);
+    else GEMINI_QUEUE.queue.push(task);
+    processGeminiQueue();
+  });
+}
+
+async function processGeminiQueue() {
+  if (GEMINI_QUEUE.busy) return;
+  GEMINI_QUEUE.busy = true;
+  while (GEMINI_QUEUE.queue.length > 0) {
+    const { body, resolve, reject } = GEMINI_QUEUE.queue.shift();
+    const since = Date.now() - GEMINI_QUEUE.lastCallAt;
+    if (GEMINI_QUEUE.lastCallAt && since < GEMINI_QUEUE.minIntervalMs) {
+      await sleep(GEMINI_QUEUE.minIntervalMs - since);
+    }
+    GEMINI_QUEUE.lastCallAt = Date.now();
+    try {
+      const res = await fetch('/api/gemini', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (res.status === 429 || res.status === 503) {
+        GEMINI_QUEUE.queue.unshift({ body, resolve, reject });
+        await sleep(15000);
+        continue;
+      }
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        reject(new Error(err.error || 'Gemini error ' + res.status));
+        continue;
+      }
+      const data = await res.json();
+      resolve(data);
+    } catch (e) {
+      reject(e);
+    }
+  }
+  GEMINI_QUEUE.busy = false;
+}
+
+/* ============================================================
+   IndexedDB
+   ============================================================ */
 const DB_NAME = 'thinking_skills_db';
 const DB_VERSION = 1;
 const STORE = 'documents';
@@ -492,6 +553,9 @@ async function dbDelete(id) {
   });
 }
 
+/* ============================================================
+   햄버거 패널
+   ============================================================ */
 $('#btnMenu').onclick = () => openPanel();
 $('#btnPanelClose').onclick = () => closePanel();
 $('#panelBackdrop').onclick = () => closePanel();
@@ -505,6 +569,9 @@ function closePanel() {
   $('#panelBackdrop').classList.remove('open');
 }
 
+/* ============================================================
+   글자 크기
+   ============================================================ */
 function applyFontSize(px) {
   STATE.baseFontSize = Math.max(12, Math.min(28, px));
   document.documentElement.style.setProperty('--base-size', STATE.baseFontSize + 'px');
@@ -515,6 +582,18 @@ function applyFontSize(px) {
 $('#sizeUp').onclick = () => applyFontSize(STATE.baseFontSize + 1);
 $('#sizeDown').onclick = () => applyFontSize(STATE.baseFontSize - 1);
 applyFontSize(parseInt(localStorage.getItem('ts_fontSize') || '16', 10));
+
+/* ============================================================
+   음성 모드 / 성별 / 속도 — 실시간 적용
+   ============================================================ */
+function applyPlaybackChange() {
+  if ('speechSynthesis' in window) speechSynthesis.cancel();
+  if (STATE.ytPlayer && STATE.ytPlayer.pauseVideo) {
+    try { STATE.ytPlayer.pauseVideo(); } catch {}
+  }
+  // 사전 합성 큐 무효화 (설정 바뀌면 다시 만들어야 함)
+  STATE.ttsPreloadQueue.clear();
+}
 
 
 $$('[data-voice-mode]').forEach((b) => {
@@ -527,6 +606,7 @@ $$('[data-voice-mode]').forEach((b) => {
     $$('[data-voice-mode]').forEach((x) => x.classList.remove('active'));
     b.classList.add('active');
     STATE.voiceMode = b.dataset.voiceMode;
+    applyPlaybackChange();
   };
 });
 
@@ -536,6 +616,7 @@ $$('[data-gender]').forEach((b) => {
     $$('[data-gender]').forEach((x) => x.classList.remove('active'));
     b.classList.add('active');
     STATE.voiceGender = b.dataset.gender;
+    applyPlaybackChange();
   };
 });
 
@@ -545,56 +626,132 @@ $$('[data-speed]').forEach((b) => {
     $$('[data-speed]').forEach((x) => x.classList.remove('active'));
     b.classList.add('active');
     STATE.speed = parseFloat(b.dataset.speed);
+    applyPlaybackChange();
   };
 });
 
+/* ============================================================
+   TTS — 미국식 발음 강제 + 콜드 제거
+   ============================================================ */
 function loadVoices() {
   return new Promise((resolve) => {
     const tryLoad = () => {
       const list = speechSynthesis.getVoices();
       if (list && list.length > 0) {
-        const enVoices = list.filter((v) => /^en/i.test(v.lang));
-        const koVoices = list.filter((v) => /^ko/i.test(v.lang));
-        const pool = enVoices.length ? enVoices : (koVoices.length ? koVoices : list);
-        const femaleHints = /female|woman|samantha|victoria|karen|zira|google.*female|yuna|seoyeon/i;
-        const maleHints = /male|man|daniel|alex|david|fred|mark|google.*male|minsu/i;
-        STATE.voices.female = pool.find((v) => femaleHints.test(v.name)) || pool[0];
-        STATE.voices.male = pool.find((v) => maleHints.test(v.name))
-          || pool.find((v) => v !== STATE.voices.female) || pool[0];
+        // localService=true 우선 (콜드 없음)
+        const usVoices = list.filter((v) => /^en[-_]US$/i.test(v.lang));
+        const usLocal = usVoices.filter((v) => v.localService === true);
+        const usNetwork = usVoices.filter((v) => v.localService !== true);
+        const enAny = list.filter((v) => /^en/i.test(v.lang));
+
+        const pool = usLocal.length ? usLocal
+                   : usNetwork.length ? usNetwork
+                   : enAny.length ? enAny : list;
+
+        const femaleHints = /female|woman|samantha|allison|ava|susan|zira|jenny|aria|nicky/i;
+        const maleHints = /male|man|alex|aaron|fred|tom|david|mark|guy|jason|matthew/i;
+        const femaleExclude = /karen|moira|tessa|daniel|fiona|kate|serena|google.*uk|english.*uk/i;
+        const maleExclude = /daniel|oliver|arthur|google.*uk|english.*uk/i;
+
+        STATE.voices.female =
+          pool.find((v) => femaleHints.test(v.name) && !femaleExclude.test(v.name)) ||
+          pool.find((v) => !femaleExclude.test(v.name)) ||
+          pool[0];
+        STATE.voices.male =
+          pool.find((v) => maleHints.test(v.name) && !maleExclude.test(v.name)) ||
+          pool.find((v) => v !== STATE.voices.female && !maleExclude.test(v.name)) ||
+          pool.find((v) => v !== STATE.voices.female) ||
+          pool[0];
+
         STATE.voices.loaded = true;
+        console.log('Voices selected:',
+          'female=', STATE.voices.female?.name, '(local:', STATE.voices.female?.localService + ')',
+          'male=', STATE.voices.male?.name, '(local:', STATE.voices.male?.localService + ')');
         resolve();
       } else {
         setTimeout(tryLoad, 200);
       }
     };
+    if (speechSynthesis.onvoiceschanged !== undefined) {
+      speechSynthesis.onvoiceschanged = tryLoad;
+    }
     tryLoad();
   });
 }
+
 async function warmupTTS() {
   if (!('speechSynthesis' in window)) return;
   await loadVoices();
-  const u = new SpeechSynthesisUtterance(' ');
-  u.volume = 0; u.rate = 1;
-  speechSynthesis.speak(u);
+
+  // 두 보이스 모두 실제 텍스트로 워밍업 (무음, 빠르게)
+  const voicesToWarm = [STATE.voices.female, STATE.voices.male].filter(Boolean);
+  for (const v of voicesToWarm) {
+    const u = new SpeechSynthesisUtterance('hello');
+    u.voice = v;
+    u.lang = 'en-US';
+    u.volume = 0;
+    u.rate = 2.0;
+    speechSynthesis.speak(u);
+    await new Promise((resolve) => {
+      u.onend = resolve;
+      u.onerror = resolve;
+      setTimeout(resolve, 3000);
+    });
+  }
   setStatus('서버 연결됨');
 }
+
+function preloadNextSentences(currentId, count = 2) {
+  const idx = STATE.sentences.findIndex((s) => s.id === currentId);
+  if (idx < 0) return;
+  for (let i = idx + 1; i <= idx + count && i < STATE.sentences.length; i++) {
+    const s = STATE.sentences[i];
+    if (STATE.ttsPreloadQueue.has(s.id)) continue;
+    const u = new SpeechSynthesisUtterance(s.text);
+    const voice = (STATE.voiceGender === 'male' ? STATE.voices.male : STATE.voices.female);
+    if (voice) u.voice = voice;
+    u.lang = 'en-US';
+    u.rate = STATE.speed;
+    u.pitch = STATE.voiceGender === 'male' ? 0.95 : 1.05;
+    STATE.ttsPreloadQueue.set(s.id, u);
+  }
+  if (STATE.ttsPreloadQueue.size > 30) {
+    const keys = Array.from(STATE.ttsPreloadQueue.keys());
+    for (let i = 0; i < keys.length - 30; i++) STATE.ttsPreloadQueue.delete(keys[i]);
+  }
+}
+
 function speak(text, opts = {}) {
-  if (!('speechSynthesis' in window)) return;
+  if (!('speechSynthesis' in window)) return Promise.resolve();
   speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  const voice = (opts.gender === 'male' ? STATE.voices.male : STATE.voices.female) || STATE.voices.female;
-  if (voice) u.voice = voice;
-  u.rate = opts.speed || STATE.speed;
-  u.pitch = opts.gender === 'male' ? 0.95 : 1.05;
-  u.lang = voice ? voice.lang : 'en-US';
+  let u;
+  if (opts.sentenceId && STATE.ttsPreloadQueue.has(opts.sentenceId)) {
+    u = STATE.ttsPreloadQueue.get(opts.sentenceId);
+    STATE.ttsPreloadQueue.delete(opts.sentenceId);
+    u.rate = opts.speed || STATE.speed;
+  } else {
+    u = new SpeechSynthesisUtterance(text);
+    const voice = (opts.gender === 'male' ? STATE.voices.male : STATE.voices.female) || STATE.voices.female;
+    if (voice) u.voice = voice;
+    u.rate = opts.speed || STATE.speed;
+    u.pitch = opts.gender === 'male' ? 0.95 : 1.05;
+    u.lang = 'en-US';
+  }
   return new Promise((resolve) => {
-    u.onend = resolve;
+    u.onend = () => {
+      if (opts.sentenceId) preloadNextSentences(opts.sentenceId, 2);
+      resolve();
+    };
     u.onerror = resolve;
     speechSynthesis.speak(u);
   });
 }
+
 function setStatus(msg) { $('#appStatus').textContent = msg; }
 
+/* ============================================================
+   파일 / 카메라
+   ============================================================ */
 $('#btnFile').onclick = () => $('#fileInput').click();
 $('#fileInput').onchange = async (e) => {
   const file = e.target.files[0];
@@ -681,6 +838,9 @@ async function ocrImage(file) {
   return data.text;
 }
 
+/* ============================================================
+   YouTube 처리
+   ============================================================ */
 $('#btnAnalyze').onclick = async () => {
   const url = $('#urlInput').value.trim();
   if (!url) { alert('URL을 입력하거나 파일을 업로드하세요.'); return; }
@@ -729,6 +889,9 @@ function createYTPlayer(videoId) {
   });
 }
 
+/* ============================================================
+   문장 분석
+   ============================================================ */
 async function analyzeText(fullText, title, sourceType) {
   STATE.sentences = [];
   STATE.progress = { done: 0, total: 0, paused: false, cancelled: false };
@@ -756,19 +919,12 @@ async function analyzeText(fullText, title, sourceType) {
   const chunks = [];
   for (let i = 0; i < rawSentences.length; i += CHUNK) chunks.push(rawSentences.slice(i, i + CHUNK));
 
-  const INTERVAL_MS = 8000;
-  let lastCallAt = 0;
-
   for (let ci = 0; ci < chunks.length; ci++) {
     if (STATE.progress.cancelled) break;
     while (STATE.progress.paused) {
       await sleep(400);
       if (STATE.progress.cancelled) break;
     }
-    const since = Date.now() - lastCallAt;
-    if (lastCallAt && since < INTERVAL_MS) await sleep(INTERVAL_MS - since);
-    lastCallAt = Date.now();
-
     try {
       const analyzed = await analyzeChunk(chunks[ci]);
       for (const s of analyzed) {
@@ -781,7 +937,6 @@ async function analyzeText(fullText, title, sourceType) {
         renderSentence(sentObj);
         STATE.progress.done++;
         setProgress(STATE.progress.done, STATE.progress.total);
-        prefetchWords(sentObj);
       }
       doc.sentences = STATE.sentences;
       await dbPut(doc);
@@ -824,15 +979,7 @@ ${sentenceArr.map((s, i) => (i + 1) + '. ' + s).join('\n')}`;
       temperature: 0.6, maxOutputTokens: 4096, responseMimeType: 'application/json',
     },
   };
-  const res = await fetch('/api/gemini', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || 'Gemini error');
-  }
-  const data = await res.json();
+  const data = await callGemini(body);
   const raw = data?.candidates?.[0]?.content?.parts?.map((p) => p.text).join('') || '[]';
   let arr;
   try { arr = JSON.parse(raw); }
@@ -845,6 +992,9 @@ ${sentenceArr.map((s, i) => (i + 1) + '. ' + s).join('\n')}`;
   return arr.slice(0, sentenceArr.length);
 }
 
+/* ============================================================
+   진행률
+   ============================================================ */
 function showProgress(show) { $('#progressCard').classList.toggle('show', show); }
 function setProgress(done, total, label) {
   $('#progressCount').textContent = done + ' / ' + total;
@@ -861,6 +1011,9 @@ $('#btnProgCancel').onclick = () => {
   setProgress(STATE.progress.done, STATE.progress.total, '취소됨');
 };
 
+/* ============================================================
+   문장 블록 렌더링
+   ============================================================ */
 function renderSentence(s) {
   const card = document.createElement('div');
   card.className = 'sentence-card';
@@ -868,9 +1021,10 @@ function renderSentence(s) {
 
   const textDiv = document.createElement('div');
   textDiv.className = 'sentence-text';
-  const tokens = s.text.split(/(\s+|[.,!?;:"()\[\]])/);
+  // 모든 영어 단어를 토큰화 (한 글자도 포함 — "I", "a" 등도 클릭 가능하게)
+  const tokens = s.text.split(/(\s+|[.,!?;:"()\[\]{}—–\-])/);
   for (const tk of tokens) {
-    if (/^[A-Za-z]{2,}$/.test(tk)) {
+    if (/^[A-Za-z][A-Za-z'-]*$/.test(tk)) {
       const span = document.createElement('span');
       span.className = 'word-token';
       span.textContent = tk;
@@ -925,6 +1079,7 @@ function mkBtn(label, onclick) {
   if (onclick) b.onclick = onclick;
   return b;
 }
+
 async function playSentence(text, sentenceId) {
   if (STATE.voiceMode === 'original' && STATE.ytPlayer && sentenceId) {
     const idx = parseInt(sentenceId.replace('s_', ''), 10) - 1;
@@ -940,7 +1095,8 @@ async function playSentence(text, sentenceId) {
       return;
     }
   }
-  await speak(text, { gender: STATE.voiceGender, speed: STATE.speed });
+  await speak(text, { gender: STATE.voiceGender, speed: STATE.speed, sentenceId });
+  if (sentenceId) preloadNextSentences(sentenceId, 2);
 }
 function nearestYTRate(r) {
   const supported = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
@@ -961,6 +1117,9 @@ function deleteSentence(id) {
   }
 }
 
+/* ============================================================
+   따라읽기
+   ============================================================ */
 async function followRead(targetText) {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) { alert('이 브라우저는 음성 인식을 지원하지 않습니다.'); return; }
@@ -982,15 +1141,27 @@ function simpleSimilarity(a, b) {
   return hit / Math.max(aw.length, bw.length);
 }
 
+/* ============================================================
+   단어 팝업 — 기본형 정규화 + 모든 단어 보장
+   ============================================================ */
 async function openWordModal(word, contextSentence) {
   $('#wordModal').classList.add('open');
   $('#wordBackdrop').classList.add('open');
   $('#wordModalContent').innerHTML =
     '<div style="text-align:center;padding:30px;"><span class="spinner"></span>단어 정보 불러오는 중</div>';
   let info;
-  try { info = await getWordInfo(word, contextSentence); }
-  catch (e) {
-    $('#wordModalContent').innerHTML = '<div style="padding:20px;color:#c00;">불러오기 실패: ' + e.message + '</div>';
+  try {
+    info = await getWordInfo(word, contextSentence);
+  } catch (e) {
+    $('#wordModalContent').innerHTML =
+      '<div style="padding:20px;color:#c00;">불러오기 실패: ' + esc(e.message) +
+      '<br><br><button class="ctrl-btn" id="retryWord">다시 시도</button></div>';
+    setTimeout(() => {
+      $('#retryWord')?.addEventListener('click', () => {
+        STATE.wordCache.delete(word.toLowerCase());
+        openWordModal(word, contextSentence);
+      });
+    }, 0);
     return;
   }
   renderWordModal(info);
@@ -1003,10 +1174,16 @@ function closeWordModal() {
 
 function renderWordModal(info) {
   const c = document.createElement('div');
+
+  // 헤드: 표시 단어는 항상 기본형(lemma) 또는 원문 단어
+  const displayWord = info.lemma || info.word || '';
+  const surfaceForm = info.surfaceForm && info.surfaceForm.toLowerCase() !== displayWord.toLowerCase()
+    ? ` (원문: ${info.surfaceForm})` : '';
+
   const head = document.createElement('div');
   head.className = 'word-head';
   head.innerHTML =
-    `<div><div class="word-term">${esc(info.word)}</div>
+    `<div><div class="word-term">${esc(displayWord)}${esc(surfaceForm)}</div>
       <div class="word-pron">${esc(info.pronunciation || '')} ${esc(info.partOfSpeech || '')}</div></div>
       <button class="mini-play" id="wmPlay">▶</button>`;
   c.appendChild(head);
@@ -1018,7 +1195,7 @@ function renderWordModal(info) {
     c.appendChild(m);
   }
 
-  if (info.morphemes && (info.morphemes.prefix || info.morphemes.root || info.morphemes.suffix)) {
+  if (info.morphemes && (info.morphemes.prefix?.form || info.morphemes.root?.form || info.morphemes.suffix?.form)) {
     const m = document.createElement('div');
     m.className = 'word-section';
     let inner = '<div class="word-section-title">형태소 분석</div>';
@@ -1115,7 +1292,7 @@ function renderWordModal(info) {
 
   $('#wordModalContent').innerHTML = '';
   $('#wordModalContent').appendChild(c);
-  $('#wmPlay').onclick = () => speak(info.word);
+  $('#wmPlay').onclick = () => speak(displayWord);
 }
 function esc(s) {
   return String(s == null ? '' : s)
@@ -1123,17 +1300,31 @@ function esc(s) {
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
-async function getWordInfo(word, context) {
-  const key = word.toLowerCase();
-  if (STATE.wordCache.has(key)) return STATE.wordCache.get(key);
+/* 단어 정보 조회 — Gemini에 기본형 정규화 + 모든 단어 응답 강제 */
+async function getWordInfo(surfaceWord, context) {
+  // 표면형 그대로 캐시 키로 1차 사용 (재호출 시 그대로 사용)
+  const surfaceKey = surfaceWord.toLowerCase().replace(/[^a-z'-]/g, '');
+  if (!surfaceKey) throw new Error('유효한 단어가 아닙니다');
+
+  if (STATE.wordCache.has(surfaceKey)) return STATE.wordCache.get(surfaceKey);
+
   const p = (async () => {
-    const prompt = `Provide JSON learning data for the English word "${word}" used in this context: "${context || ''}".
-Output ONLY this JSON shape, no markdown:
+    const prompt = `You are an English dictionary API. Analyze the English word "${surfaceWord}" as it appears in the context: "${context || ''}".
+
+CRITICAL RULES:
+1. Always identify the lemma (base/dictionary form) of the word. Examples: "running" -> "run", "better" -> "good", "children" -> "child", "went" -> "go", "studies" -> "study", "n't" -> "not", "'s" -> "is/has".
+2. ALWAYS produce a complete response even for: pronouns (I, you, he, it), articles (a, an, the), prepositions (in, on, at), conjunctions (and, but, or), contractions ('s, n't, 're), auxiliary verbs (do, does, did, have, has, had, be, am, is, are, was, were), interjections (oh, ah, wow), proper nouns, slang, abbreviations.
+3. For proper nouns or names, set partOfSpeech to "proper noun" and explain who/what they refer to in meaning.
+4. NEVER refuse or return empty. If unsure, provide your best linguistic guess.
+5. Output ONLY this JSON, no markdown, no explanation outside JSON.
+
 {
-  "word": "${word}",
-  "pronunciation": "/IPA/",
-  "partOfSpeech": "noun|verb|adj|...",
-  "meaning": "한글 뜻 (간결)",
+  "surfaceForm": "${surfaceWord}",
+  "lemma": "<dictionary base form>",
+  "word": "<dictionary base form (same as lemma)>",
+  "pronunciation": "/IPA of lemma/",
+  "partOfSpeech": "noun|verb|adjective|adverb|pronoun|article|preposition|conjunction|interjection|proper noun|auxiliary|contraction|determiner|other",
+  "meaning": "한글 뜻 (간결하게, 여러 의미가 있으면 문맥에 맞는 것 우선)",
   "morphemes": {
     "prefix": {"form":"", "meaningEn":"", "meaningKo":""},
     "root":   {"form":"", "meaningEn":"", "meaningKo":""},
@@ -1142,37 +1333,58 @@ Output ONLY this JSON shape, no markdown:
   "verbForms": {"base":"","thirdPerson":"","past":"","pastParticiple":"","presentParticiple":""},
   "synonyms": [{"word":"","meaning":"","example":""},{"word":"","meaning":"","example":""}],
   "antonyms": [{"word":"","meaning":"","example":""},{"word":"","meaning":"","example":""}],
-  "examples": ["simple sentence example", "a complex sentence example with subordinate clause"]
-}
-If the word is not a verb, leave verbForms fields as empty strings. If a morpheme part does not exist, leave it empty.`;
-    const body = {
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.5, maxOutputTokens: 1500, responseMimeType: 'application/json' },
-    };
-    const res = await fetch('/api/gemini', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    if (!res.ok) throw new Error('단어 분석 실패');
-    const data = await res.json();
-    const raw = data?.candidates?.[0]?.content?.parts?.map((p) => p.text).join('') || '{}';
-    try { return JSON.parse(raw); } catch { return { word, meaning: '' }; }
-  })();
-  STATE.wordCache.set(key, p);
-  return p;
-}
-function prefetchWords(sentence) {
-  if (!sentence.words) return;
-  (async () => {
-    for (const w of sentence.words.slice(0, 6)) {
-      if (!STATE.wordCache.has(w.toLowerCase())) {
-        try { await getWordInfo(w, sentence.text); } catch {}
-        await sleep(600);
-      }
-    }
-  })();
+  "examples": ["simple sentence using the lemma", "a complex sentence with subordinate clause using the lemma"]
 }
 
+- If word is not a verb, leave verbForms fields as empty strings ("").
+- If a morpheme part does not exist for this word, leave that part's fields as "".
+- If no clear synonyms/antonyms exist (e.g., for "the", "a"), provide an empty array [].
+- ALWAYS provide at least 1 example sentence, even for function words (e.g., "The book is on the table." for "the").`;
+
+    const body = {
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.3, maxOutputTokens: 1800, responseMimeType: 'application/json',
+      },
+    };
+    // 사용자 클릭은 우선순위로 큐 앞쪽에 삽입
+    const data = await callGemini(body, true);
+    const raw = data?.candidates?.[0]?.content?.parts?.map((p) => p.text).join('') || '{}';
+    let parsed;
+    try { parsed = JSON.parse(raw); }
+    catch {
+      // 파싱 실패 시 최소 정보라도 반환
+      return {
+        surfaceForm: surfaceWord,
+        lemma: surfaceWord.toLowerCase(),
+        word: surfaceWord.toLowerCase(),
+        meaning: '단어 정보를 분석할 수 없습니다',
+        examples: [`Example: ${surfaceWord}`],
+      };
+    }
+    // 최소 필드 보장
+    if (!parsed.lemma) parsed.lemma = surfaceWord.toLowerCase();
+    if (!parsed.word) parsed.word = parsed.lemma;
+    if (!parsed.surfaceForm) parsed.surfaceForm = surfaceWord;
+    return parsed;
+  })();
+
+  STATE.wordCache.set(surfaceKey, p);
+  // 기본형으로도 캐싱 (다른 굴절형이 같은 lemma를 조회할 때 재사용)
+  p.then((info) => {
+    if (info.lemma) {
+      const lemmaKey = info.lemma.toLowerCase().replace(/[^a-z'-]/g, '');
+      if (lemmaKey && lemmaKey !== surfaceKey && !STATE.wordCache.has(lemmaKey)) {
+        STATE.wordCache.set(lemmaKey, Promise.resolve(info));
+      }
+    }
+  }).catch(() => {});
+  return p;
+}
+
+/* ============================================================
+   저장된 문서 목록
+   ============================================================ */
 async function refreshDocList() {
   const list = await dbAll();
   const c = $('#docList');
@@ -1220,6 +1432,9 @@ async function refreshDocList() {
   });
 }
 
+/* ============================================================
+   초기화
+   ============================================================ */
 (async function init() {
   await warmupTTS();
   refreshDocList();

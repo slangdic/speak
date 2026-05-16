@@ -1,25 +1,33 @@
-// THINKING SKILLS — Cloudflare Pages Advanced Mode 단일 워커 (수정판)
+// THINKING SKILLS — Cloudflare Pages Advanced Mode 단일 워커
+// 라우팅: /api/gemini, /api/youtube → 동적 처리
+//        그 외 → 정적 자산(index.html 등) 패스스루
+// 환경변수: GEMINI_API_KEY_1, GEMINI_API_KEY_2, ... 자동 수집
 
-const MODEL = 'gemini-3-flash-preview';
+const MODEL = 'gemini-2.5-flash';
 const API_BASE = 'https://generativelanguage.googleapis.com/v1beta';
 
+// 키 라운드로빈 커서 (워커 인스턴스 메모리)
 let keyCursor = 0;
 
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
+    // ---- CORS 프리플라이트 ----
     if (request.method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: corsHeaders() });
     }
 
     try {
+      // ---- API 라우팅 ----
       if (url.pathname === '/api/gemini' && request.method === 'POST') {
         return withCORS(await handleGemini(request, env));
       }
       if (url.pathname === '/api/youtube' && request.method === 'GET') {
         return withCORS(await handleYouTube(request, env));
       }
+
+      // ---- 정적 자산 패스스루 (index.html 등) ----
       return env.ASSETS.fetch(request);
     } catch (e) {
       return withCORS(jsonError(500, 'Worker exception: ' + (e?.message || String(e))));
@@ -28,7 +36,7 @@ export default {
 };
 
 /* ============================================================
-   /api/gemini
+   /api/gemini — Gemini API 프록시 (x-goog-api-key 헤더 + 라운드로빈)
    ============================================================ */
 async function handleGemini(request, env) {
   let body;
@@ -41,29 +49,30 @@ async function handleGemini(request, env) {
   const keys = collectKeys(env);
   if (keys.length === 0) return jsonError(500, 'No GEMINI_API_KEY_* configured');
 
-  const payload = {
-    contents,
-    generationConfig: generationConfig || {
-      temperature: 0.7,
-      maxOutputTokens: 8192,
-      responseMimeType: 'application/json',
-    },
+  const payload = { contents };
+  payload.generationConfig = generationConfig || {
+    temperature: 0.7,
+    maxOutputTokens: 8192,
+    responseMimeType: 'application/json',
   };
   if (systemInstruction) payload.systemInstruction = systemInstruction;
 
   const endpoint = stream ? 'streamGenerateContent' : 'generateContent';
-  const queryExtra = stream ? '&alt=sse' : '';
+  const queryExtra = stream ? '?alt=sse' : '';
   let lastError = null;
 
   for (let i = 0; i < keys.length; i++) {
     const keyIndex = (keyCursor + i) % keys.length;
     const key = keys[keyIndex];
-    const apiUrl = `${API_BASE}/models/${MODEL}:${endpoint}?key=${key}${queryExtra}`;
+    const apiUrl = `${API_BASE}/models/${MODEL}:${endpoint}${queryExtra}`;
 
     try {
       const upstream = await fetch(apiUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': key,
+        },
         body: JSON.stringify(payload),
       });
 
@@ -105,7 +114,7 @@ async function handleGemini(request, env) {
 }
 
 /* ============================================================
-   /api/youtube — 강화된 자막 추출 + Gemini 폴백
+   /api/youtube — 자막 추출 (timedtext 우선) + Gemini 폴백
    ============================================================ */
 async function handleYouTube(request, env) {
   const url = new URL(request.url);
@@ -167,60 +176,100 @@ function extractVideoId(url) {
 }
 
 async function fetchCaptions(videoId) {
-  // consent.youtube.com 우회를 위한 쿠키 + UA 설정
-  const watchUrl = `https://www.youtube.com/watch?v=${videoId}&hl=en&persist_hl=1`;
-  const res = await fetch(watchUrl, {
-    headers: {
-      'User-Agent':
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
-      'Accept-Language': 'en-US,en;q=0.9',
-      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-      'Cookie': 'CONSENT=YES+1; PREF=hl=en',
-    },
-  });
-  if (!res.ok) throw new Error(`Watch page status ${res.status}`);
-  const html = await res.text();
-
-  // 1) captionTracks 직접 매칭 (욕심 적은 + 비탐욕)
-  let tracks = null;
-  const reList = [
-    /"captionTracks":\s*(\[[^\]]*?\])/,
-    /\\"captionTracks\\":\s*(\[[^\]]*?\])/,
-  ];
-  for (const re of reList) {
-    const m = html.match(re);
-    if (m) {
-      let raw = m[1];
-      // 이스케이프 해제 (\\" 형태로 들어온 경우)
-      if (raw.includes('\\"')) {
-        raw = raw.replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+  // 1차: timedtext 엔드포인트 직접 호출 (watch 페이지 우회)
+  const langs = ['en', 'ko', 'en-US', 'en-GB'];
+  for (const lang of langs) {
+    try {
+      const directUrl = `https://www.youtube.com/api/timedtext?lang=${lang}&v=${videoId}`;
+      const r = await fetch(directUrl, {
+        headers: {
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
+        },
+      });
+      if (r.ok) {
+        const xml = await r.text();
+        if (xml && xml.includes('<text')) {
+          const segments = parseCaptionXml(xml);
+          if (segments.length > 0) return { language: lang, segments };
+        }
       }
-      try { tracks = JSON.parse(raw); break; }
-      catch (e) { /* 다음 패턴 시도 */ }
-    }
+    } catch (e) { /* 다음 언어 시도 */ }
   }
-  if (!tracks || !Array.isArray(tracks) || tracks.length === 0) return null;
 
-  const pick =
-    tracks.find((t) => /^en/i.test(t.languageCode || '')) ||
-    tracks.find((t) => /^ko/i.test(t.languageCode || '')) ||
-    tracks[0];
+  // 2차: 자동생성 자막 (asr)
+  for (const lang of ['en', 'ko']) {
+    try {
+      const asrUrl = `https://www.youtube.com/api/timedtext?lang=${lang}&v=${videoId}&kind=asr`;
+      const r = await fetch(asrUrl, {
+        headers: {
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
+        },
+      });
+      if (r.ok) {
+        const xml = await r.text();
+        if (xml && xml.includes('<text')) {
+          const segments = parseCaptionXml(xml);
+          if (segments.length > 0) return { language: lang + '-asr', segments };
+        }
+      }
+    } catch (e) { /* 다음 시도 */ }
+  }
 
-  let baseUrl = pick.baseUrl;
-  if (!baseUrl) return null;
-  baseUrl = baseUrl.replace(/\\u0026/g, '&').replace(/\\\//g, '/');
+  // 3차: watch 페이지 (마지막 시도, 429 가능성 있음)
+  try {
+    const watchUrl = `https://www.youtube.com/watch?v=${videoId}&hl=en&persist_hl=1`;
+    const res = await fetch(watchUrl, {
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Cookie': 'CONSENT=YES+1; PREF=hl=en',
+      },
+    });
+    if (!res.ok) throw new Error(`Watch page status ${res.status}`);
+    const html = await res.text();
 
-  const capRes = await fetch(baseUrl, {
-    headers: {
-      'User-Agent':
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
-      'Accept-Language': 'en-US,en;q=0.9',
-    },
-  });
-  if (!capRes.ok) throw new Error(`Caption XML status ${capRes.status}`);
-  const xml = await capRes.text();
-  const segments = parseCaptionXml(xml);
-  return { language: pick.languageCode, segments };
+    let tracks = null;
+    const reList = [
+      /"captionTracks":\s*(\[[^\]]*?\])/,
+      /\\"captionTracks\\":\s*(\[[^\]]*?\])/,
+    ];
+    for (const re of reList) {
+      const m = html.match(re);
+      if (m) {
+        let raw = m[1];
+        if (raw.includes('\\"')) raw = raw.replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+        try { tracks = JSON.parse(raw); break; } catch (e) { /* 다음 시도 */ }
+      }
+    }
+    if (!tracks || !Array.isArray(tracks) || tracks.length === 0) return null;
+
+    const pick =
+      tracks.find((t) => /^en/i.test(t.languageCode || '')) ||
+      tracks.find((t) => /^ko/i.test(t.languageCode || '')) ||
+      tracks[0];
+
+    let baseUrl = pick.baseUrl;
+    if (!baseUrl) return null;
+    baseUrl = baseUrl.replace(/\\u0026/g, '&').replace(/\\\//g, '/');
+
+    const capRes = await fetch(baseUrl, {
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
+        'Accept-Language': 'en-US,en;q=0.9',
+      },
+    });
+    if (!capRes.ok) throw new Error(`Caption XML status ${capRes.status}`);
+    const xml = await capRes.text();
+    const segments = parseCaptionXml(xml);
+    return { language: pick.languageCode, segments };
+  } catch (e) {
+    throw e;
+  }
 }
 
 function parseCaptionXml(xml) {
@@ -244,14 +293,15 @@ function decodeEntities(s) {
 }
 
 async function transcribeWithGemini(ytUrl, keys) {
+  // 공식 REST 예시 형식: snake_case + mime_type 생략 (YouTube URL 표준)
   const payload = {
     contents: [{
       role: 'user',
       parts: [
-        { fileData: { fileUri: ytUrl, mimeType: 'video/*' } },
+        { file_data: { file_uri: ytUrl } },
         { text:
           'Transcribe the spoken content of this YouTube video into clean readable text. ' +
-          'Output only the transcript text without timestamps or speaker labels.' },
+          'Output only the transcript text, without timestamps or speaker labels.' },
       ],
     }],
     generationConfig: { temperature: 0.2, maxOutputTokens: 8192 },
@@ -261,11 +311,15 @@ async function transcribeWithGemini(ytUrl, keys) {
   for (let i = 0; i < keys.length; i++) {
     const keyIndex = (keyCursor + i) % keys.length;
     const key = keys[keyIndex];
-    const apiUrl = `${API_BASE}/models/${MODEL}:generateContent?key=${key}`;
+    const apiUrl = `${API_BASE}/models/${MODEL}:generateContent`;
+
     try {
       const r = await fetch(apiUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': key,
+        },
         body: JSON.stringify(payload),
       });
       if (r.status === 429 || r.status >= 500) {
@@ -274,12 +328,13 @@ async function transcribeWithGemini(ytUrl, keys) {
       }
       if (!r.ok) {
         const errText = await r.text();
-        lastError = `Gemini ${r.status}: ${errText.slice(0, 200)}`;
+        lastError = `Gemini ${r.status}: ${errText.slice(0, 300)}`;
         continue;
       }
       const data = await r.json();
       keyCursor = (keyIndex + 1) % keys.length;
-      const text = data?.candidates?.[0]?.content?.parts?.map((p) => p.text).filter(Boolean).join('\n') || '';
+      const text = data?.candidates?.[0]?.content?.parts
+        ?.map((p) => p.text).filter(Boolean).join('\n') || '';
       if (text) return text;
       lastError = `Key ${keyIndex + 1}: empty response`;
     } catch (e) {
@@ -290,7 +345,7 @@ async function transcribeWithGemini(ytUrl, keys) {
 }
 
 /* ============================================================
-   공통
+   공통 유틸
    ============================================================ */
 function collectKeys(env) {
   const indexed = [];

@@ -1,42 +1,34 @@
-// THINKING SKILLS — Cloudflare Pages Advanced Mode 단일 워커
-// 라우팅: /api/gemini, /api/youtube → 동적 처리
-//        그 외 → 정적 자산(index.html 등) 패스스루
-// 환경변수: GEMINI_API_KEY_1, GEMINI_API_KEY_2, ... 자동 수집
+// THINKING SKILLS — Cloudflare Pages Advanced Mode 단일 워커 (수정판)
 
 const MODEL = 'gemini-3-flash-preview';
 const API_BASE = 'https://generativelanguage.googleapis.com/v1beta';
 
-// 키 라운드로빈 커서 (워커 인스턴스 메모리)
 let keyCursor = 0;
 
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
-    // ---- CORS 프리플라이트 ----
     if (request.method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: corsHeaders() });
     }
 
     try {
-      // ---- API 라우팅 ----
       if (url.pathname === '/api/gemini' && request.method === 'POST') {
         return withCORS(await handleGemini(request, env));
       }
       if (url.pathname === '/api/youtube' && request.method === 'GET') {
         return withCORS(await handleYouTube(request, env));
       }
-
-      // ---- 정적 자산 패스스루 (index.html 등) ----
       return env.ASSETS.fetch(request);
     } catch (e) {
-      return withCORS(jsonError(500, 'Worker exception: ' + e.message));
+      return withCORS(jsonError(500, 'Worker exception: ' + (e?.message || String(e))));
     }
   },
 };
 
 /* ============================================================
-   /api/gemini — Gemini API 프록시 (키 라운드로빈 + 스트리밍)
+   /api/gemini
    ============================================================ */
 async function handleGemini(request, env) {
   let body;
@@ -47,9 +39,7 @@ async function handleGemini(request, env) {
   if (!contents) return jsonError(400, 'contents is required');
 
   const keys = collectKeys(env);
-  if (keys.length === 0) {
-    return jsonError(500, 'No GEMINI_API_KEY_* configured in environment');
-  }
+  if (keys.length === 0) return jsonError(500, 'No GEMINI_API_KEY_* configured');
 
   const payload = {
     contents,
@@ -63,11 +53,9 @@ async function handleGemini(request, env) {
 
   const endpoint = stream ? 'streamGenerateContent' : 'generateContent';
   const queryExtra = stream ? '&alt=sse' : '';
-
-  const maxAttempts = keys.length;
   let lastError = null;
 
-  for (let i = 0; i < maxAttempts; i++) {
+  for (let i = 0; i < keys.length; i++) {
     const keyIndex = (keyCursor + i) % keys.length;
     const key = keys[keyIndex];
     const apiUrl = `${API_BASE}/models/${MODEL}:${endpoint}?key=${key}${queryExtra}`;
@@ -113,21 +101,24 @@ async function handleGemini(request, env) {
       lastError = `Key ${keyIndex + 1} exception: ${e.message}`;
     }
   }
-  return jsonError(503, `All keys failed. Last: ${lastError}`);
+  return jsonError(503, `All Gemini keys failed. Last: ${lastError}`);
 }
 
 /* ============================================================
-   /api/youtube — 자막 추출 + Gemini 폴백
+   /api/youtube — 강화된 자막 추출 + Gemini 폴백
    ============================================================ */
 async function handleYouTube(request, env) {
   const url = new URL(request.url);
   const ytUrl = url.searchParams.get('url');
+  const debug = url.searchParams.get('debug') === '1';
   if (!ytUrl) return jsonError(400, 'url query param required');
 
   const videoId = extractVideoId(ytUrl);
   if (!videoId) return jsonError(400, 'Invalid YouTube URL');
 
-  // 1차: 자막 트랙 시도
+  const errors = [];
+
+  // 1차: 자막 트랙
   try {
     const captions = await fetchCaptions(videoId);
     if (captions && captions.segments && captions.segments.length > 0) {
@@ -139,13 +130,23 @@ async function handleYouTube(request, env) {
         fullText: captions.segments.map((s) => s.text).join(' '),
       }), { headers: { 'Content-Type': 'application/json; charset=utf-8' } });
     }
-  } catch (e) { /* 폴백 진행 */ }
+    errors.push('captions: no tracks found');
+  } catch (e) {
+    errors.push('captions: ' + e.message);
+  }
 
   // 2차: Gemini 영상 직접 분석
   try {
     const keys = collectKeys(env);
-    if (keys.length === 0) return jsonError(500, 'No GEMINI_API_KEY_* configured');
+    if (keys.length === 0) {
+      errors.push('gemini: no API keys');
+      return jsonError(500, debug ? errors.join(' | ') : 'No API keys configured');
+    }
     const text = await transcribeWithGemini(ytUrl, keys);
+    if (!text || text.trim().length < 10) {
+      errors.push('gemini: empty transcript');
+      return jsonError(502, debug ? errors.join(' | ') : 'Transcription empty');
+    }
     return new Response(JSON.stringify({
       source: 'gemini',
       videoId,
@@ -153,45 +154,69 @@ async function handleYouTube(request, env) {
       fullText: text,
     }), { headers: { 'Content-Type': 'application/json; charset=utf-8' } });
   } catch (e) {
-    return jsonError(502, `Caption + Gemini fallback both failed: ${e.message}`);
+    errors.push('gemini: ' + e.message);
+    return jsonError(502, debug ? errors.join(' | ') : 'Both caption and Gemini failed');
   }
 }
 
 function extractVideoId(url) {
   const m = url.match(
-    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([A-Za-z0-9_-]{11})/
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/|youtube\.com\/live\/)([A-Za-z0-9_-]{11})/
   );
   return m ? m[1] : null;
 }
 
 async function fetchCaptions(videoId) {
-  const watchUrl = `https://www.youtube.com/watch?v=${videoId}&hl=en`;
+  // consent.youtube.com 우회를 위한 쿠키 + UA 설정
+  const watchUrl = `https://www.youtube.com/watch?v=${videoId}&hl=en&persist_hl=1`;
   const res = await fetch(watchUrl, {
+    headers: {
+      'User-Agent':
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
+      'Accept-Language': 'en-US,en;q=0.9',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      'Cookie': 'CONSENT=YES+1; PREF=hl=en',
+    },
+  });
+  if (!res.ok) throw new Error(`Watch page status ${res.status}`);
+  const html = await res.text();
+
+  // 1) captionTracks 직접 매칭 (욕심 적은 + 비탐욕)
+  let tracks = null;
+  const reList = [
+    /"captionTracks":\s*(\[[^\]]*?\])/,
+    /\\"captionTracks\\":\s*(\[[^\]]*?\])/,
+  ];
+  for (const re of reList) {
+    const m = html.match(re);
+    if (m) {
+      let raw = m[1];
+      // 이스케이프 해제 (\\" 형태로 들어온 경우)
+      if (raw.includes('\\"')) {
+        raw = raw.replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+      }
+      try { tracks = JSON.parse(raw); break; }
+      catch (e) { /* 다음 패턴 시도 */ }
+    }
+  }
+  if (!tracks || !Array.isArray(tracks) || tracks.length === 0) return null;
+
+  const pick =
+    tracks.find((t) => /^en/i.test(t.languageCode || '')) ||
+    tracks.find((t) => /^ko/i.test(t.languageCode || '')) ||
+    tracks[0];
+
+  let baseUrl = pick.baseUrl;
+  if (!baseUrl) return null;
+  baseUrl = baseUrl.replace(/\\u0026/g, '&').replace(/\\\//g, '/');
+
+  const capRes = await fetch(baseUrl, {
     headers: {
       'User-Agent':
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
       'Accept-Language': 'en-US,en;q=0.9',
     },
   });
-  if (!res.ok) throw new Error(`Watch page status ${res.status}`);
-  const html = await res.text();
-
-  const m = html.match(/"captionTracks":\s*(\[.*?\])/);
-  if (!m) return null;
-
-  let tracks;
-  try { tracks = JSON.parse(m[1]); } catch { return null; }
-  if (!Array.isArray(tracks) || tracks.length === 0) return null;
-
-  const pick =
-    tracks.find((t) => /^en/i.test(t.languageCode)) ||
-    tracks.find((t) => /^ko/i.test(t.languageCode)) ||
-    tracks[0];
-
-  const baseUrl = pick.baseUrl;
-  if (!baseUrl) return null;
-
-  const capRes = await fetch(baseUrl);
   if (!capRes.ok) throw new Error(`Caption XML status ${capRes.status}`);
   const xml = await capRes.text();
   const segments = parseCaptionXml(xml);
@@ -205,7 +230,7 @@ function parseCaptionXml(xml) {
   while ((m = regex.exec(xml)) !== null) {
     const start = parseFloat(m[1]);
     const dur = parseFloat(m[2]);
-    const text = decodeEntities(m[3]).replace(/\s+/g, ' ').trim();
+    const text = decodeEntities(m[3]).replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
     if (text) segments.push({ start, end: start + dur, text });
   }
   return segments;
@@ -249,20 +274,23 @@ async function transcribeWithGemini(ytUrl, keys) {
       }
       if (!r.ok) {
         const errText = await r.text();
-        throw new Error(`Gemini error ${r.status}: ${errText}`);
+        lastError = `Gemini ${r.status}: ${errText.slice(0, 200)}`;
+        continue;
       }
       const data = await r.json();
       keyCursor = (keyIndex + 1) % keys.length;
-      return data?.candidates?.[0]?.content?.parts?.map((p) => p.text).join('\n') || '';
+      const text = data?.candidates?.[0]?.content?.parts?.map((p) => p.text).filter(Boolean).join('\n') || '';
+      if (text) return text;
+      lastError = `Key ${keyIndex + 1}: empty response`;
     } catch (e) {
       lastError = `Key ${keyIndex + 1} exception: ${e.message}`;
     }
   }
-  throw new Error(`All keys failed. Last: ${lastError}`);
+  throw new Error(lastError || 'unknown');
 }
 
 /* ============================================================
-   공통 유틸
+   공통
    ============================================================ */
 function collectKeys(env) {
   const indexed = [];

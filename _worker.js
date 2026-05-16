@@ -1,341 +1,390 @@
-// THINKING SKILLS — Cloudflare Pages Advanced Mode 단일 워커
-// 라우팅: /api/gemini, /api/youtube, /api/health → 동적 처리
-//        그 외 → 정적 자산 패스스루
-// 환경변수: GEMINI_API_KEY_1, GEMINI_API_KEY_2, ... 자동 수집
+/* ============================================================
+   _worker.js - Cloudflare Pages Advanced Mode
+   Routes:
+     POST /api/gemini   - Gemini API proxy with key rotation
+     GET  /api/youtube  - YouTube caption extraction + Gemini fallback
+     GET  /api/health   - Health check
+   Env vars: GEMINI_API_KEY_1, GEMINI_API_KEY_2, ...
+   ============================================================ */
 
 const MODEL = 'gemini-2.5-flash';
 const API_BASE = 'https://generativelanguage.googleapis.com/v1beta';
+
 let keyCursor = 0;
 
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    
+    // CORS preflight
     if (request.method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: corsHeaders() });
     }
+    
     try {
+      if (url.pathname === '/api/health') {
+        return handleHealth(env);
+      }
       if (url.pathname === '/api/gemini' && request.method === 'POST') {
-        return withCORS(await handleGemini(request, env));
+        return handleGemini(request, env);
       }
       if (url.pathname === '/api/youtube' && request.method === 'GET') {
-        return withCORS(await handleYouTube(request, env));
+        return handleYouTube(request, env, url);
       }
-      if (url.pathname === '/api/health') {
-        const keys = collectKeys(env);
-        return withCORS(new Response(JSON.stringify({
-          ok: true, model: MODEL, keyCount: keys.length, time: new Date().toISOString()
-        }), { headers: { 'Content-Type': 'application/json; charset=utf-8' } }));
-      }
-      return env.ASSETS.fetch(request);
-    } catch (e) {
-      return withCORS(jsonError(500, 'Worker exception: ' + (e?.message || String(e))));
+      // 정적 자산 fallback
+      return env.ASSETS ? env.ASSETS.fetch(request) : new Response('Not Found', { status: 404 });
+    } catch (err) {
+      return jsonError(500, `Worker exception: ${err.message}`);
     }
-  },
+  }
 };
 
-/* ============================================================
-   /api/gemini — Gemini API 프록시
-   ============================================================ */
+/* ---------- /api/health ---------- */
+function handleHealth(env) {
+  const keys = collectKeys(env);
+  return withCORS(new Response(JSON.stringify({
+    ok: true,
+    model: MODEL,
+    keyCount: keys.length,
+    timestamp: new Date().toISOString()
+  }), { headers: { 'Content-Type': 'application/json' } }));
+}
+
+/* ---------- /api/gemini ---------- */
 async function handleGemini(request, env) {
   let body;
-  try { body = await request.json(); }
-  catch { return jsonError(400, 'Invalid JSON body'); }
-
-  const { contents, generationConfig, stream = false, systemInstruction } = body;
-  if (!contents) return jsonError(400, 'contents is required');
-
+  try {
+    body = await request.json();
+  } catch {
+    return jsonError(400, 'Invalid JSON body');
+  }
+  
+  if (!body.contents) {
+    return jsonError(400, 'Missing "contents" field');
+  }
+  
   const keys = collectKeys(env);
-  if (keys.length === 0) return jsonError(500, 'No GEMINI_API_KEY_* configured');
-
-  const payload = { contents };
-  payload.generationConfig = generationConfig || {
-    temperature: 0.7, maxOutputTokens: 8192, responseMimeType: 'application/json'
+  if (keys.length === 0) {
+    return jsonError(500, 'No GEMINI_API_KEY_* environment variable configured');
+  }
+  
+  const stream = !!body.stream;
+  delete body.stream;
+  
+  const payload = {
+    contents: body.contents,
+    generationConfig: body.generationConfig || {
+      temperature: 0.7,
+      maxOutputTokens: 8192,
+      responseMimeType: 'application/json'
+    }
   };
-  if (systemInstruction) payload.systemInstruction = systemInstruction;
-
+  if (body.systemInstruction) payload.systemInstruction = body.systemInstruction;
+  
   const endpoint = stream ? 'streamGenerateContent' : 'generateContent';
-  const queryExtra = stream ? '?alt=sse' : '';
-
-  let lastError = null;
+  
+  // 2라운드 재시도
   for (let round = 0; round < 2; round++) {
-    if (round > 0) await sleep(30000);
     for (let i = 0; i < keys.length; i++) {
-      const keyIndex = (keyCursor + i) % keys.length;
-      const key = keys[keyIndex];
-      const apiUrl = `${API_BASE}/models/${MODEL}:${endpoint}${queryExtra}`;
+      const idx = (keyCursor + i) % keys.length;
+      const key = keys[idx];
+      const apiUrl = `${API_BASE}/models/${MODEL}:${endpoint}?key=${key.value}`;
+      
       try {
         const upstream = await fetch(apiUrl, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
-          body: JSON.stringify(payload),
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
         });
-        if (upstream.status === 429 || upstream.status >= 500) {
-          lastError = `Key ${keyIndex + 1} status ${upstream.status}`;
+        
+        if (upstream.status === 429 || (upstream.status >= 500 && upstream.status < 600)) {
           continue;
         }
-        if (!upstream.ok) {
-          const errText = await upstream.text();
-          return jsonError(upstream.status, `Gemini error: ${errText.slice(0, 500)}`);
-        }
-        keyCursor = (keyIndex + 1) % keys.length;
+        
+        keyCursor = (idx + 1) % keys.length;
+        
         if (stream) {
           return new Response(upstream.body, {
-            status: 200,
+            status: upstream.status,
             headers: {
-              'Content-Type': 'text/event-stream; charset=utf-8',
-              'Cache-Control': 'no-cache',
-              'X-Used-Key-Index': String(keyIndex + 1)
-            }
-          });
-        } else {
-          const data = await upstream.json();
-          return new Response(JSON.stringify(data), {
-            status: 200,
-            headers: {
-              'Content-Type': 'application/json; charset=utf-8',
-              'X-Used-Key-Index': String(keyIndex + 1)
+              ...corsHeaders(),
+              'Content-Type': 'text/event-stream',
+              'X-Used-Key-Index': String(key.index)
             }
           });
         }
-      } catch (e) {
-        lastError = `Key ${keyIndex + 1} exception: ${e.message}`;
+        
+        const text = await upstream.text();
+        return new Response(text, {
+          status: upstream.status,
+          headers: {
+            ...corsHeaders(),
+            'Content-Type': 'application/json',
+            'X-Used-Key-Index': String(key.index)
+          }
+        });
+      } catch (err) {
+        continue;
       }
     }
+    if (round === 0) await sleep(30000);
   }
-  return jsonError(503, `All Gemini keys failed. Last: ${lastError}`);
+  
+  return jsonError(503, 'All Gemini keys exhausted (429/5xx)');
 }
 
-/* ============================================================
-   /api/youtube — 자막 추출 + Gemini 전사 폴백
-   ============================================================ */
-async function handleYouTube(request, env) {
-  const url = new URL(request.url);
-  const ytUrl = url.searchParams.get('url');
+/* ---------- /api/youtube ---------- */
+async function handleYouTube(request, env, url) {
+  const ytUrlRaw = url.searchParams.get('url');
   const debug = url.searchParams.get('debug') === '1';
-  if (!ytUrl) return jsonError(400, 'url query param required');
-
-  const videoId = extractVideoId(ytUrl);
+  if (!ytUrlRaw) return jsonError(400, 'Missing url parameter');
+  
+  // Shorts/embed/live URL 정규화
+  const normalizedUrl = normalizeYouTubeUrl(ytUrlRaw);
+  const videoId = extractVideoId(normalizedUrl);
   if (!videoId) return jsonError(400, 'Invalid YouTube URL');
-
-  // Shorts/embed/live URL을 표준 watch URL로 정규화
-  const normalizedUrl = `https://www.youtube.com/watch?v=${videoId}`;
+  
   const errors = [];
-
-  // 1차: 자막 추출
+  
+  // 비디오 제목 (oEmbed)
+  let title = '';
   try {
-    const captions = await fetchCaptions(videoId);
-    if (captions && captions.segments && captions.segments.length > 0) {
-      return new Response(JSON.stringify({
-        source: 'captions',
-        videoId,
-        language: captions.language,
-        segments: captions.segments,
-        fullText: captions.segments.map(s => s.text).join(' ')
-      }), { headers: { 'Content-Type': 'application/json; charset=utf-8' } });
-    }
-    errors.push('captions: no tracks found');
+    title = await fetchYouTubeTitle(normalizedUrl);
   } catch (e) {
-    errors.push('captions: ' + e.message);
+    errors.push(`oembed: ${e.message}`);
   }
-
-  // 2차: Gemini 영상 직접 전사
+  
+  // 1단계: 자막 추출
+  let captionResult = null;
   try {
-    const keys = collectKeys(env);
-    if (keys.length === 0) {
-      errors.push('gemini: no API keys');
-      return jsonError(500, debug ? errors.join(' | ') : 'No API keys configured');
-    }
-    const text = await transcribeWithGemini(normalizedUrl, keys);
-    if (!text || text.trim().length < 10) {
-      errors.push('gemini: empty transcript');
-      return jsonError(502, debug ? errors.join(' | ') : 'Transcription empty');
-    }
-    return new Response(JSON.stringify({
+    captionResult = await fetchCaptions(videoId);
+  } catch (e) {
+    errors.push(`captions: ${e.message}`);
+  }
+  
+  if (captionResult && captionResult.segments && captionResult.segments.length > 0) {
+    const fullText = captionResult.segments.map(s => s.text).join(' ');
+    return withCORS(new Response(JSON.stringify({
+      source: 'captions',
+      videoId,
+      title,
+      language: captionResult.language,
+      segments: captionResult.segments,
+      fullText
+    }), { headers: { 'Content-Type': 'application/json' } }));
+  }
+  
+  if (!captionResult) errors.push('captions: no tracks found');
+  
+  // 2단계: Gemini 전사 fallback
+  const keys = collectKeys(env);
+  if (keys.length === 0) {
+    return jsonError(500, `Caption extraction failed and no Gemini keys. ${errors.join(' | ')}`);
+  }
+  
+  try {
+    const transcript = await transcribeWithGemini(normalizedUrl, keys);
+    return withCORS(new Response(JSON.stringify({
       source: 'gemini',
       videoId,
+      title,
+      language: 'unknown',
       segments: [],
-      fullText: text
-    }), { headers: { 'Content-Type': 'application/json; charset=utf-8' } });
+      fullText: transcript
+    }), { headers: { 'Content-Type': 'application/json' } }));
   } catch (e) {
-    errors.push('gemini: ' + e.message);
-    return jsonError(502, debug ? errors.join(' | ') : 'Both caption and Gemini failed');
+    errors.push(`gemini: ${e.message}`);
+  }
+  
+  if (debug) {
+    return withCORS(new Response(JSON.stringify({
+      error: errors.join(' | '),
+      videoId,
+      title
+    }), { status: 502, headers: { 'Content-Type': 'application/json' } }));
+  }
+  return jsonError(502, errors.join(' | '));
+}
+
+/* ---------- YouTube URL 정규화 ---------- */
+function normalizeYouTubeUrl(raw) {
+  try {
+    const u = new URL(raw);
+    let id = null;
+    if (u.hostname === 'youtu.be') {
+      id = u.pathname.slice(1);
+    } else if (u.pathname.startsWith('/shorts/')) {
+      id = u.pathname.split('/')[2];
+    } else if (u.pathname.startsWith('/embed/')) {
+      id = u.pathname.split('/')[2];
+    } else if (u.pathname.startsWith('/live/')) {
+      id = u.pathname.split('/')[2];
+    } else if (u.pathname === '/watch') {
+      id = u.searchParams.get('v');
+    }
+    if (id) return `https://www.youtube.com/watch?v=${id}`;
+    return raw;
+  } catch {
+    return raw;
   }
 }
 
 function extractVideoId(url) {
-  const m = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/|youtube\.com\/live\/)([A-Za-z0-9_-]{11})/);
+  const m = url.match(/[?&]v=([a-zA-Z0-9_-]{11})/) ||
+            url.match(/youtu\.be\/([a-zA-Z0-9_-]{11})/) ||
+            url.match(/\/shorts\/([a-zA-Z0-9_-]{11})/) ||
+            url.match(/\/embed\/([a-zA-Z0-9_-]{11})/) ||
+            url.match(/\/live\/([a-zA-Z0-9_-]{11})/);
   return m ? m[1] : null;
 }
 
-/* ============================================================
-   자막 추출 — 3단계 폴백
-   0) type=list 로 트랙 목록 조회 후 발견된 트랙 요청 (가장 효과적)
-   1) 언어 추측 직접 요청
-   2) watch 페이지 스크레이핑 (최후 수단)
-   ============================================================ */
-async function fetchCaptions(videoId) {
-  const UA_LIST = [
-    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15',
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
-    'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'
-  ];
-  const baseHeaders = (i) => ({
-    'User-Agent': UA_LIST[i % UA_LIST.length],
-    'Accept-Language': 'en-US,en;q=0.9',
-    'Accept': 'text/xml,application/xml;q=0.9,*/*;q=0.8'
+/* ---------- YouTube 제목 (oEmbed) ---------- */
+async function fetchYouTubeTitle(videoUrl) {
+  const oembedUrl = `https://www.youtube.com/oembed?url=${encodeURIComponent(videoUrl)}&format=json`;
+  const res = await fetch(oembedUrl, {
+    headers: { 'User-Agent': 'Mozilla/5.0' }
   });
+  if (!res.ok) throw new Error(`oembed ${res.status}`);
+  const data = await res.json();
+  return data.title || '';
+}
 
-  // 0) type=list 로 사용 가능한 자막 트랙 목록 조회
+/* ---------- 자막 추출 (3단계 폴백) ---------- */
+const UA_LIST = [
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15',
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'
+];
+
+async function fetchCaptions(videoId) {
+  // 단계 0: 트랙 목록 조회 후 각 트랙 시도
   try {
     const listUrl = `https://www.youtube.com/api/timedtext?type=list&v=${videoId}`;
-    const r = await fetch(listUrl, { headers: baseHeaders(0) });
-    if (r.ok) {
-      const xml = await r.text();
-      const tracks = [];
-      const trackRe = /<track\b([^>]*)\/?>/g;
-      let m;
-      while ((m = trackRe.exec(xml)) !== null) {
-        const attrs = m[1];
-        const lang = (attrs.match(/lang_code="([^"]+)"/) || [])[1];
-        const kind = (attrs.match(/kind="([^"]*)"/) || [])[1] || '';
-        const name = (attrs.match(/name="([^"]*)"/) || [])[1] || '';
-        if (lang) tracks.push({ lang, kind, name });
-      }
-      // 영어 우선, 그 다음 한국어, 그 외 순
+    const listRes = await fetch(listUrl, { headers: { 'User-Agent': UA_LIST[0] } });
+    if (listRes.ok) {
+      const listXml = await listRes.text();
+      const tracks = parseTrackList(listXml);
+      // 영어 우선, 한국어, 그외
       tracks.sort((a, b) => {
-        const score = (t) => (/^en/i.test(t.lang) ? 0 : /^ko/i.test(t.lang) ? 1 : 2);
+        const score = t => t.lang_code === 'en' ? 0 : t.lang_code === 'ko' ? 1 : 2;
         return score(a) - score(b);
       });
-      for (let i = 0; i < tracks.length; i++) {
-        const t = tracks[i];
+      for (const track of tracks) {
         for (const fmt of ['srv3', '']) {
-          try {
-            const params = new URLSearchParams({ lang: t.lang, v: videoId });
-            if (t.kind) params.set('kind', t.kind);
-            if (t.name) params.set('name', t.name);
+          for (let uaIdx = 0; uaIdx < UA_LIST.length; uaIdx++) {
+            const params = new URLSearchParams({
+              lang: track.lang_code,
+              v: videoId
+            });
+            if (track.name) params.set('name', track.name);
+            if (track.kind) params.set('kind', track.kind);
             if (fmt) params.set('fmt', fmt);
-            const url2 = `https://www.youtube.com/api/timedtext?${params.toString()}`;
-            const r2 = await fetch(url2, { headers: baseHeaders(i + 1) });
-            if (r2.ok) {
-              const xml2 = await r2.text();
-              if (xml2 && (xml2.includes('<text') || xml2.includes('<p '))) {
-                const seg = fmt === 'srv3' ? parseSrv3Xml(xml2) : parseCaptionXml(xml2);
-                if (seg.length > 0) {
-                  return { language: t.lang + (t.kind ? '-' + t.kind : ''), segments: seg };
-                }
-              }
-            }
-          } catch {}
-        }
-      }
-    }
-  } catch {}
-
-  // 1) 언어 추측 직접 요청
-  const attempts = [
-    { lang: 'en', kind: '', fmt: 'srv3' },
-    { lang: 'en', kind: '', fmt: '' },
-    { lang: 'en', kind: 'asr', fmt: 'srv3' },
-    { lang: 'en', kind: 'asr', fmt: '' },
-    { lang: 'ko', kind: '', fmt: 'srv3' },
-    { lang: 'ko', kind: '', fmt: '' },
-    { lang: 'ko', kind: 'asr', fmt: 'srv3' },
-    { lang: 'ko', kind: 'asr', fmt: '' },
-    { lang: 'en-US', kind: '', fmt: 'srv3' },
-    { lang: 'en-GB', kind: '', fmt: 'srv3' },
-  ];
-  for (let i = 0; i < attempts.length; i++) {
-    const a = attempts[i];
-    try {
-      const params = new URLSearchParams({ lang: a.lang, v: videoId });
-      if (a.kind) params.set('kind', a.kind);
-      if (a.fmt) params.set('fmt', a.fmt);
-      const url = `https://www.youtube.com/api/timedtext?${params.toString()}`;
-      const r = await fetch(url, { headers: baseHeaders(i) });
-      if (r.ok) {
-        const xml = await r.text();
-        if (xml && (xml.includes('<text') || xml.includes('<p '))) {
-          const seg = a.fmt === 'srv3' ? parseSrv3Xml(xml) : parseCaptionXml(xml);
-          if (seg.length > 0) return { language: a.lang + (a.kind ? '-' + a.kind : ''), segments: seg };
-        }
-      }
-    } catch {}
-  }
-
-  // 2) watch 페이지 스크레이핑 (최후 수단)
-  try {
-    const watchUrl = `https://www.youtube.com/watch?v=${videoId}&hl=en&persist_hl=1`;
-    const res = await fetch(watchUrl, {
-      headers: {
-        ...baseHeaders(0),
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Cookie': 'CONSENT=YES+1; PREF=hl=en'
-      }
-    });
-    if (res.ok) {
-      const html = await res.text();
-      let tracks = null;
-      const reList = [
-        /"captionTracks":\s*(\[[^\]]*?\])/,
-        /\\"captionTracks\\":\s*(\[[^\]]*?\])/
-      ];
-      for (const re of reList) {
-        const m2 = html.match(re);
-        if (m2) {
-          let raw = m2[1];
-          if (raw.includes('\\"')) raw = raw.replace(/\\"/g, '"').replace(/\\\\/g, '\\');
-          try { tracks = JSON.parse(raw); break; } catch {}
-        }
-      }
-      if (tracks && Array.isArray(tracks) && tracks.length > 0) {
-        const pick = tracks.find(t => /^en/i.test(t.languageCode || ''))
-                 || tracks.find(t => /^ko/i.test(t.languageCode || ''))
-                 || tracks[0];
-        let baseUrl = pick.baseUrl;
-        if (baseUrl) {
-          baseUrl = baseUrl.replace(/\\u0026/g, '&').replace(/\\\//g, '/');
-          const capRes = await fetch(baseUrl, { headers: baseHeaders(1) });
-          if (capRes.ok) {
-            const xml = await capRes.text();
-            const seg = parseCaptionXml(xml);
-            if (seg.length > 0) return { language: pick.languageCode, segments: seg };
+            const url = `https://www.youtube.com/api/timedtext?${params}`;
+            try {
+              const res = await fetch(url, { headers: { 'User-Agent': UA_LIST[uaIdx] } });
+              if (!res.ok) continue;
+              const xml = await res.text();
+              if (!xml || xml.length < 20) continue;
+              const segments = fmt === 'srv3' ? parseSrv3Xml(xml) : parseCaptionXml(xml);
+              if (segments.length > 0) return { language: track.lang_code, segments };
+            } catch {}
           }
         }
       }
     }
   } catch {}
-
+  
+  // 단계 1: 언어 추측 직접 호출
+  const guesses = [
+    { lang: 'en' }, { lang: 'ko' }, { lang: 'en-US' }, { lang: 'en-GB' },
+    { lang: 'en', kind: 'asr' }, { lang: 'ko', kind: 'asr' },
+    { lang: 'en', fmt: 'srv3' }, { lang: 'ko', fmt: 'srv3' },
+    { lang: 'en', kind: 'asr', fmt: 'srv3' }, { lang: 'ko', kind: 'asr', fmt: 'srv3' }
+  ];
+  for (const g of guesses) {
+    for (let uaIdx = 0; uaIdx < UA_LIST.length; uaIdx++) {
+      const params = new URLSearchParams({ lang: g.lang, v: videoId });
+      if (g.kind) params.set('kind', g.kind);
+      if (g.fmt) params.set('fmt', g.fmt);
+      const url = `https://www.youtube.com/api/timedtext?${params}`;
+      try {
+        const res = await fetch(url, { headers: { 'User-Agent': UA_LIST[uaIdx] } });
+        if (!res.ok) continue;
+        const xml = await res.text();
+        if (!xml || xml.length < 20) continue;
+        const segments = g.fmt === 'srv3' ? parseSrv3Xml(xml) : parseCaptionXml(xml);
+        if (segments.length > 0) return { language: g.lang, segments };
+      } catch {}
+    }
+  }
+  
+  // 단계 2: 워치 페이지 스크랩
+  try {
+    const watchUrl = `https://www.youtube.com/watch?v=${videoId}`;
+    const res = await fetch(watchUrl, { headers: { 'User-Agent': UA_LIST[1] } });
+    if (res.ok) {
+      const html = await res.text();
+      const match = html.match(/"captionTracks":(\[.*?\])/);
+      if (match) {
+        const tracks = JSON.parse(match[1]);
+        tracks.sort((a, b) => {
+          const score = t => (t.languageCode || '').startsWith('en') ? 0 : (t.languageCode || '').startsWith('ko') ? 1 : 2;
+          return score(a) - score(b);
+        });
+        for (const track of tracks) {
+          if (!track.baseUrl) continue;
+          try {
+            const capRes = await fetch(track.baseUrl, { headers: { 'User-Agent': UA_LIST[1] } });
+            if (!capRes.ok) continue;
+            const xml = await capRes.text();
+            const segments = parseCaptionXml(xml);
+            if (segments.length > 0) return { language: track.languageCode || 'unknown', segments };
+          } catch {}
+        }
+      }
+    }
+  } catch {}
+  
   return null;
+}
+
+function parseTrackList(xml) {
+  const tracks = [];
+  const regex = /<track\s+([^/]+?)\/?>/g;
+  let m;
+  while ((m = regex.exec(xml)) !== null) {
+    const attrs = {};
+    const attrRegex = /(\w+)="([^"]*)"/g;
+    let a;
+    while ((a = attrRegex.exec(m[1])) !== null) {
+      attrs[a[1]] = a[2];
+    }
+    if (attrs.lang_code) tracks.push(attrs);
+  }
+  return tracks;
 }
 
 function parseCaptionXml(xml) {
   const segments = [];
-  const regex = /<text\s+start="([\d.]+)"\s+dur="([\d.]+)"[^>]*>([\s\S]*?)<\/text>/g;
+  const regex = /<text\s+start="([^"]+)"(?:\s+dur="([^"]+)")?[^>]*>([\s\S]*?)<\/text>/g;
   let m;
   while ((m = regex.exec(xml)) !== null) {
-    const start = parseFloat(m[1]);
-    const dur = parseFloat(m[2]);
-    const text = decodeEntities(m[3])
-      .replace(/<[^>]+>/g, '')
-      .replace(/\s+/g, ' ')
-      .trim();
+    const start = parseFloat(m[1]) || 0;
+    const dur = parseFloat(m[2]) || 0;
+    const text = decodeEntities(m[3].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim());
     if (text) segments.push({ start, end: start + dur, text });
   }
   return segments;
 }
 
 function parseSrv3Xml(xml) {
-  // srv3 포맷: <p t="시작ms" d="지속ms">...<s>텍스트</s>...</p>
   const segments = [];
-  const regex = /<p\s+t="(\d+)"\s+d="(\d+)"[^>]*>([\s\S]*?)<\/p>/g;
+  const regex = /<p\s+t="(\d+)"(?:\s+d="(\d+)")?[^>]*>([\s\S]*?)<\/p>/g;
   let m;
   while ((m = regex.exec(xml)) !== null) {
     const start = parseInt(m[1], 10) / 1000;
-    const dur = parseInt(m[2], 10) / 1000;
-    const inner = m[3];
-    const text = decodeEntities(inner.replace(/<[^>]+>/g, ''))
-      .replace(/\s+/g, ' ')
-      .trim();
+    const dur = (parseInt(m[2] || '0', 10)) / 1000;
+    const text = decodeEntities(m[3].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim());
     if (text) segments.push({ start, end: start + dur, text });
   }
   return segments;
@@ -343,73 +392,68 @@ function parseSrv3Xml(xml) {
 
 function decodeEntities(s) {
   return s
-    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"').replace(/&#39;/g, "'")
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'")
     .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(parseInt(n, 10)));
 }
 
-async function transcribeWithGemini(ytUrl, keys) {
+/* ---------- Gemini 전사 ---------- */
+async function transcribeWithGemini(videoUrl, keys) {
   const payload = {
     contents: [{
       role: 'user',
       parts: [
-        { file_data: { file_uri: ytUrl } },
-        { text: 'Transcribe the spoken content of this YouTube video into clean readable text. Output only the transcript text, without timestamps or speaker labels.' }
+        { text: 'Transcribe this YouTube video accurately. Output only the transcript text in the spoken language. Use proper punctuation and sentence breaks. Do not include timestamps or speaker labels.' },
+        { file_data: { file_uri: videoUrl, mime_type: 'video/*' } }
       ]
     }],
     generationConfig: { temperature: 0.2, maxOutputTokens: 8192 }
   };
-
-  let lastError = null;
+  
   for (let round = 0; round < 2; round++) {
-    if (round > 0) await sleep(30000);
     for (let i = 0; i < keys.length; i++) {
-      const keyIndex = (keyCursor + i) % keys.length;
-      const key = keys[keyIndex];
-      const apiUrl = `${API_BASE}/models/${MODEL}:generateContent`;
+      const idx = (keyCursor + i) % keys.length;
+      const key = keys[idx];
+      const apiUrl = `${API_BASE}/models/${MODEL}:generateContent?key=${key.value}`;
       try {
-        const r = await fetch(apiUrl, {
+        const res = await fetch(apiUrl, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
-        if (r.status === 429 || r.status >= 500) {
-          lastError = `Key ${keyIndex + 1} status ${r.status}`;
-          continue;
+        if (res.status === 429 || (res.status >= 500 && res.status < 600)) continue;
+        if (!res.ok) {
+          const errTxt = await res.text();
+          throw new Error(`Gemini ${res.status}: ${errTxt.slice(0, 200)}`);
         }
-        if (!r.ok) {
-          const errText = await r.text();
-          lastError = `Gemini ${r.status}: ${errText.slice(0, 300)}`;
-          continue;
-        }
-        const data = await r.json();
-        keyCursor = (keyIndex + 1) % keys.length;
-        const text = data?.candidates?.[0]?.content?.parts
-          ?.map(p => p.text).filter(Boolean).join('\n') || '';
-        if (text) return text;
-        lastError = `Key ${keyIndex + 1}: empty response`;
-      } catch (e) {
-        lastError = `Key ${keyIndex + 1} exception: ${e.message}`;
+        const data = await res.json();
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        keyCursor = (idx + 1) % keys.length;
+        if (text) return text.trim();
+      } catch (err) {
+        if (round === 1 && i === keys.length - 1) throw err;
       }
     }
+    if (round === 0) await sleep(30000);
   }
-  throw new Error(lastError || 'unknown');
+  throw new Error(`All keys exhausted (${keys.length} keys, 2 rounds)`);
 }
 
-/* ============================================================
-   유틸리티
-   ============================================================ */
+/* ---------- Util ---------- */
 function collectKeys(env) {
-  const indexed = [];
-  const pattern = /^GEMINI_API_KEY_(\d+)$/;
-  for (const [k, v] of Object.entries(env)) {
-    const m = k.match(pattern);
-    if (m && typeof v === 'string' && v.trim()) {
-      indexed.push({ idx: parseInt(m[1], 10), key: v.trim() });
+  const keys = [];
+  for (const k of Object.keys(env)) {
+    const m = k.match(/^GEMINI_API_KEY_(\d+)$/);
+    if (m && env[k]) {
+      keys.push({ index: parseInt(m[1], 10), value: env[k] });
     }
   }
-  indexed.sort((a, b) => a.idx - b.idx);
-  return indexed.map(x => x.key);
+  keys.sort((a, b) => a.index - b.index);
+  return keys;
 }
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
@@ -423,17 +467,15 @@ function corsHeaders() {
   };
 }
 
-function withCORS(response) {
-  const headers = new Headers(response.headers);
-  const cors = corsHeaders();
-  for (const [k, v] of Object.entries(cors)) headers.set(k, v);
-  return new Response(response.body, {
-    status: response.status, statusText: response.statusText, headers
-  });
+function withCORS(res) {
+  const headers = new Headers(res.headers);
+  for (const [k, v] of Object.entries(corsHeaders())) headers.set(k, v);
+  return new Response(res.body, { status: res.status, headers });
 }
 
 function jsonError(status, message) {
-  return new Response(JSON.stringify({ error: message }), {
-    status, headers: { 'Content-Type': 'application/json; charset=utf-8' }
-  });
+  return withCORS(new Response(JSON.stringify({ error: message }), {
+    status,
+    headers: { 'Content-Type': 'application/json' }
+  }));
 }

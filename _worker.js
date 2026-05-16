@@ -57,7 +57,6 @@ async function handleGemini(request, env) {
   const queryExtra = stream ? '?alt=sse' : '';
 
   let lastError = null;
-  // 2라운드 시도 (429 누적 시 30초 대기 후 재시도)
   for (let round = 0; round < 2; round++) {
     if (round > 0) await sleep(30000);
     for (let i = 0; i < keys.length; i++) {
@@ -122,7 +121,7 @@ async function handleYouTube(request, env) {
   const normalizedUrl = `https://www.youtube.com/watch?v=${videoId}`;
   const errors = [];
 
-  // 1차: timedtext 직접 호출
+  // 1차: 자막 추출
   try {
     const captions = await fetchCaptions(videoId);
     if (captions && captions.segments && captions.segments.length > 0) {
@@ -139,7 +138,7 @@ async function handleYouTube(request, env) {
     errors.push('captions: ' + e.message);
   }
 
-  // 2차: Gemini 영상 직접 전사 (정규화된 URL 사용)
+  // 2차: Gemini 영상 직접 전사
   try {
     const keys = collectKeys(env);
     if (keys.length === 0) {
@@ -168,8 +167,71 @@ function extractVideoId(url) {
   return m ? m[1] : null;
 }
 
+/* ============================================================
+   자막 추출 — 3단계 폴백
+   0) type=list 로 트랙 목록 조회 후 발견된 트랙 요청 (가장 효과적)
+   1) 언어 추측 직접 요청
+   2) watch 페이지 스크레이핑 (최후 수단)
+   ============================================================ */
 async function fetchCaptions(videoId) {
-  // timedtext 다양한 파라미터 조합 시도 (watch 페이지 스크레이핑은 차단 빈발로 제거)
+  const UA_LIST = [
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
+    'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'
+  ];
+  const baseHeaders = (i) => ({
+    'User-Agent': UA_LIST[i % UA_LIST.length],
+    'Accept-Language': 'en-US,en;q=0.9',
+    'Accept': 'text/xml,application/xml;q=0.9,*/*;q=0.8'
+  });
+
+  // 0) type=list 로 사용 가능한 자막 트랙 목록 조회
+  try {
+    const listUrl = `https://www.youtube.com/api/timedtext?type=list&v=${videoId}`;
+    const r = await fetch(listUrl, { headers: baseHeaders(0) });
+    if (r.ok) {
+      const xml = await r.text();
+      const tracks = [];
+      const trackRe = /<track\b([^>]*)\/?>/g;
+      let m;
+      while ((m = trackRe.exec(xml)) !== null) {
+        const attrs = m[1];
+        const lang = (attrs.match(/lang_code="([^"]+)"/) || [])[1];
+        const kind = (attrs.match(/kind="([^"]*)"/) || [])[1] || '';
+        const name = (attrs.match(/name="([^"]*)"/) || [])[1] || '';
+        if (lang) tracks.push({ lang, kind, name });
+      }
+      // 영어 우선, 그 다음 한국어, 그 외 순
+      tracks.sort((a, b) => {
+        const score = (t) => (/^en/i.test(t.lang) ? 0 : /^ko/i.test(t.lang) ? 1 : 2);
+        return score(a) - score(b);
+      });
+      for (let i = 0; i < tracks.length; i++) {
+        const t = tracks[i];
+        for (const fmt of ['srv3', '']) {
+          try {
+            const params = new URLSearchParams({ lang: t.lang, v: videoId });
+            if (t.kind) params.set('kind', t.kind);
+            if (t.name) params.set('name', t.name);
+            if (fmt) params.set('fmt', fmt);
+            const url2 = `https://www.youtube.com/api/timedtext?${params.toString()}`;
+            const r2 = await fetch(url2, { headers: baseHeaders(i + 1) });
+            if (r2.ok) {
+              const xml2 = await r2.text();
+              if (xml2 && (xml2.includes('<text') || xml2.includes('<p '))) {
+                const seg = fmt === 'srv3' ? parseSrv3Xml(xml2) : parseCaptionXml(xml2);
+                if (seg.length > 0) {
+                  return { language: t.lang + (t.kind ? '-' + t.kind : ''), segments: seg };
+                }
+              }
+            }
+          } catch {}
+        }
+      }
+    }
+  } catch {}
+
+  // 1) 언어 추측 직접 요청
   const attempts = [
     { lang: 'en', kind: '', fmt: 'srv3' },
     { lang: 'en', kind: '', fmt: '' },
@@ -182,12 +244,6 @@ async function fetchCaptions(videoId) {
     { lang: 'en-US', kind: '', fmt: 'srv3' },
     { lang: 'en-GB', kind: '', fmt: 'srv3' },
   ];
-  const uaList = [
-    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15',
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
-    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36'
-  ];
-
   for (let i = 0; i < attempts.length; i++) {
     const a = attempts[i];
     try {
@@ -195,24 +251,60 @@ async function fetchCaptions(videoId) {
       if (a.kind) params.set('kind', a.kind);
       if (a.fmt) params.set('fmt', a.fmt);
       const url = `https://www.youtube.com/api/timedtext?${params.toString()}`;
-      const r = await fetch(url, {
-        headers: {
-          'User-Agent': uaList[i % uaList.length],
-          'Accept-Language': 'en-US,en;q=0.9',
-          'Accept': 'text/xml,application/xml;q=0.9,*/*;q=0.8'
-        }
-      });
+      const r = await fetch(url, { headers: baseHeaders(i) });
       if (r.ok) {
         const xml = await r.text();
         if (xml && (xml.includes('<text') || xml.includes('<p '))) {
           const seg = a.fmt === 'srv3' ? parseSrv3Xml(xml) : parseCaptionXml(xml);
-          if (seg.length > 0) {
-            return { language: a.lang + (a.kind ? '-' + a.kind : ''), segments: seg };
+          if (seg.length > 0) return { language: a.lang + (a.kind ? '-' + a.kind : ''), segments: seg };
+        }
+      }
+    } catch {}
+  }
+
+  // 2) watch 페이지 스크레이핑 (최후 수단)
+  try {
+    const watchUrl = `https://www.youtube.com/watch?v=${videoId}&hl=en&persist_hl=1`;
+    const res = await fetch(watchUrl, {
+      headers: {
+        ...baseHeaders(0),
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Cookie': 'CONSENT=YES+1; PREF=hl=en'
+      }
+    });
+    if (res.ok) {
+      const html = await res.text();
+      let tracks = null;
+      const reList = [
+        /"captionTracks":\s*(\[[^\]]*?\])/,
+        /\\"captionTracks\\":\s*(\[[^\]]*?\])/
+      ];
+      for (const re of reList) {
+        const m2 = html.match(re);
+        if (m2) {
+          let raw = m2[1];
+          if (raw.includes('\\"')) raw = raw.replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+          try { tracks = JSON.parse(raw); break; } catch {}
+        }
+      }
+      if (tracks && Array.isArray(tracks) && tracks.length > 0) {
+        const pick = tracks.find(t => /^en/i.test(t.languageCode || ''))
+                 || tracks.find(t => /^ko/i.test(t.languageCode || ''))
+                 || tracks[0];
+        let baseUrl = pick.baseUrl;
+        if (baseUrl) {
+          baseUrl = baseUrl.replace(/\\u0026/g, '&').replace(/\\\//g, '/');
+          const capRes = await fetch(baseUrl, { headers: baseHeaders(1) });
+          if (capRes.ok) {
+            const xml = await capRes.text();
+            const seg = parseCaptionXml(xml);
+            if (seg.length > 0) return { language: pick.languageCode, segments: seg };
           }
         }
       }
-    } catch { /* 다음 시도 */ }
-  }
+    }
+  } catch {}
+
   return null;
 }
 

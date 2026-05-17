@@ -43,7 +43,6 @@ input:focus,textarea:focus{outline:none}
 ::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px}
 ::-webkit-scrollbar-track{background:transparent}
 
-/* Layout */
 .app{min-height:100vh;display:flex;flex-direction:column}
 .header{position:sticky;top:0;z-index:50;background:var(--bg);border-bottom:1px solid var(--line);padding:12px 16px;display:flex;align-items:center;gap:10px}
 .header h1{margin:0;font-size:1.1rem;font-weight:700;color:var(--ink);flex:1}
@@ -51,11 +50,9 @@ input:focus,textarea:focus{outline:none}
 .header .menu-btn svg{width:20px;height:20px;stroke:var(--ink);fill:none;stroke-width:2.2;stroke-linecap:round}
 .main{flex:1;padding:16px;max-width:880px;width:100%;margin:0 auto}
 
-/* Card */
 .card{background:var(--card);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);margin-bottom:14px}
 .card h2{margin:0 0 12px;font-size:1rem;font-weight:600;color:var(--ink)}
 
-/* Input area */
 .input-row{display:flex;gap:8px;align-items:stretch}
 .input-row input{flex:1;padding:12px 14px;border:1.5px solid var(--line);border-radius:12px;background:var(--card-soft);min-width:0}
 .input-row input:focus{border-color:var(--sage)}
@@ -77,24 +74,20 @@ input:focus,textarea:focus{outline:none}
 .icon-btn:hover{background:var(--bg-alt)}
 .icon-btn svg{width:20px;height:20px;stroke:var(--ink);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 
-/* Mode toggle */
 .mode-toggle{display:flex;background:var(--card-soft);border-radius:12px;padding:4px;margin-bottom:12px}
 .mode-toggle button{flex:1;padding:9px;border-radius:9px;font-weight:600;color:var(--ink-soft);font-size:.9rem}
 .mode-toggle button.active{background:var(--sage);color:#fff}
 
-/* Progress */
 #progressCard{display:none}
 .progress-wrap{height:10px;background:var(--bg-alt);border-radius:6px;overflow:hidden;margin-top:8px}
 .progress-bar{height:100%;background:linear-gradient(90deg,var(--sage),var(--sage-dk));width:0%;transition:width .3s}
 .progress-text{font-size:.85rem;color:var(--ink-soft);margin-top:6px}
 
-/* Warmup bar */
-#warmupBar{display:none;background:var(--sage-soft);border-radius:10px;padding:8px 12px;margin-bottom:12px;font-size:.82rem;color:var(--ink);display:none;align-items:center;gap:10px}
+#warmupBar{background:var(--sage-soft);border-radius:10px;padding:8px 12px;margin-bottom:12px;font-size:.82rem;color:var(--ink);display:none;align-items:center;gap:10px}
 #warmupBar.active{display:flex}
 #warmupBar .wb-dot{width:8px;height:8px;border-radius:50%;background:var(--sage-dk);animation:pulse 1.4s infinite}
 @keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}
 
-/* Sentence */
 .sentence-card{background:var(--card);border-radius:var(--radius);padding:14px;margin-bottom:10px;box-shadow:var(--shadow);scroll-margin-top:80px}
 .sentence-head{display:flex;align-items:flex-start;gap:10px;margin-bottom:8px}
 .s-num{flex-shrink:0;width:28px;height:28px;border-radius:50%;background:var(--sage-soft);color:var(--ink);font-size:.82rem;font-weight:700;display:flex;align-items:center;justify-content:center}
@@ -126,7 +119,6 @@ input:focus,textarea:focus{outline:none}
 .hard-desc{margin-top:6px;color:var(--ink);font-size:.88rem;line-height:1.5}
 .hard-phonetic{font-family:'Inter';color:var(--sage-dk);font-size:.85rem;margin-top:4px}
 
-/* Side panel */
 .side-overlay{position:fixed;inset:0;background:rgba(40,30,20,.4);z-index:200;display:none;backdrop-filter:blur(2px)}
 .side-overlay.show{display:block}
 .side-panel{position:fixed;top:0;right:0;bottom:0;width:min(380px,90vw);background:var(--bg);z-index:210;transform:translateX(100%);transition:transform .25s;overflow-y:auto;padding:18px;box-shadow:-4px 0 20px rgba(40,30,20,.15)}
@@ -136,20 +128,22 @@ input:focus,textarea:focus{outline:none}
 .side-close{position:absolute;top:14px;right:14px;width:34px;height:34px;border-radius:50%;background:var(--card);display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow)}
 .side-close svg{width:18px;height:18px;stroke:var(--ink);stroke-width:2.4}
 
-/* Settings */
 .opt-group{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
 .opt-chip{padding:6px 12px;border-radius:18px;background:var(--card);border:1.5px solid var(--line);font-size:.85rem;color:var(--ink-soft);font-weight:500}
 .opt-chip.active{background:var(--sage);color:#fff;border-color:var(--sage)}
+.opt-chip.disabled{opacity:.4;pointer-events:none}
+.voice-chip{display:flex;flex-direction:column;align-items:flex-start;padding:8px 12px;border-radius:12px;background:var(--card);border:1.5px solid var(--line);min-width:0;flex:1 1 calc(33% - 6px);text-align:left;gap:2px}
+.voice-chip.active{background:var(--sage);color:#fff;border-color:var(--sage)}
+.voice-chip .vc-name{font-weight:600;font-size:.85rem;line-height:1.2}
+.voice-chip .vc-desc{font-size:.7rem;opacity:.75;line-height:1.2}
 .font-size-row{display:flex;align-items:center;gap:10px;margin-top:6px}
 .font-size-row button{width:36px;height:36px;border-radius:10px;background:var(--card);border:1px solid var(--line);font-size:1rem;font-weight:700}
 .font-size-row span{min-width:50px;text-align:center;font-weight:600}
 
-/* Storage info */
 .storage-box{background:var(--card);border-radius:12px;padding:12px;margin-top:8px;font-size:.85rem}
 .storage-box .row{display:flex;justify-content:space-between;padding:3px 0;color:var(--ink-soft)}
 .storage-box .row b{color:var(--ink)}
 
-/* Document list */
 .doc-toolbar{display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap}
 .doc-toolbar input{flex:1;min-width:120px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);font-size:.85rem}
 .doc-toolbar select{padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);font-size:.85rem}
@@ -161,17 +155,19 @@ input:focus,textarea:focus{outline:none}
 .doc-title{font-weight:600;font-size:.9rem;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .doc-meta{font-size:.74rem;color:var(--ink-mute);margin-top:2px;display:flex;gap:6px;flex-wrap:wrap}
 .doc-badge{background:var(--sage-soft);color:var(--sage-dk);padding:1px 6px;border-radius:4px;font-weight:600}
+.doc-badge.resume{background:#f8d8a8;color:#a06030}
 .doc-actions{display:flex;gap:4px}
 .doc-actions button{width:30px;height:30px;border-radius:8px;background:var(--card-soft);border:1px solid var(--line);display:flex;align-items:center;justify-content:center}
+.doc-actions button.resume-btn{background:var(--warm);border-color:var(--warm-dk)}
 .doc-actions svg{width:14px;height:14px;stroke:var(--ink-soft);fill:none;stroke-width:2}
 .doc-bulk{display:flex;gap:6px;margin-top:6px;padding:8px;background:var(--card-soft);border-radius:8px}
 
-/* Word modal */
 .wmodal-overlay{position:fixed;inset:0;background:rgba(40,30,20,.4);z-index:300;display:none;backdrop-filter:blur(2px)}
 .wmodal-overlay.show{display:block}
 .wmodal-stack{position:fixed;inset:0;z-index:310;display:none;pointer-events:none}
 .wmodal-stack.show{display:block}
-.wmodal{position:absolute;left:50%;background:var(--card);border-radius:18px;width:min(420px,92vw);max-height:80vh;overflow-y:auto;box-shadow:var(--shadow-lg);pointer-events:auto;padding:18px;transform:translateX(-50%)}
+.wmodal{position:absolute;left:50%;background:var(--card);border-radius:18px;width:min(420px,92vw);max-height:80vh;overflow-y:auto;box-shadow:var(--shadow-lg);pointer-events:auto;padding:18px;transform:translateX(-50%);animation:wmIn .14s ease-out}
+@keyframes wmIn{from{opacity:0;transform:translateX(-50%) translateY(-8px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
 .wmodal-close{position:absolute;top:10px;right:10px;width:30px;height:30px;border-radius:50%;background:var(--bg);display:flex;align-items:center;justify-content:center}
 .wmodal-close svg{width:16px;height:16px;stroke:var(--ink);stroke-width:2.4;fill:none}
 .wm-head{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:4px;padding-right:36px}
@@ -196,7 +192,6 @@ input:focus,textarea:focus{outline:none}
 .wm-spinner{width:24px;height:24px;border:3px solid var(--line);border-top-color:var(--sage);border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 8px}
 @keyframes spin{to{transform:rotate(360deg)}}
 
-/* Generic modal */
 .gen-overlay{position:fixed;inset:0;background:rgba(40,30,20,.4);z-index:280;display:none;backdrop-filter:blur(2px)}
 .gen-overlay.show{display:flex;align-items:center;justify-content:center;padding:16px}
 .gen-modal{background:var(--card);border-radius:20px;width:min(520px,100%);max-height:90vh;overflow-y:auto;padding:20px;position:relative}
@@ -216,7 +211,6 @@ input:focus,textarea:focus{outline:none}
 .topic-row button svg{width:18px;height:18px;stroke:var(--ink);fill:none;stroke-width:2}
 .topic-row button.rec svg{stroke:#fff}
 
-/* Word count scrubber - carousel */
 .scrub-wrap{display:flex;align-items:center;justify-content:center;gap:14px;padding:14px 4px;background:var(--card-soft);border-radius:12px;user-select:none;touch-action:pan-y}
 .scrub-arrow{width:36px;height:36px;border-radius:50%;background:var(--card);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .scrub-arrow svg{width:16px;height:16px;stroke:var(--ink);fill:none;stroke-width:2.4}
@@ -227,7 +221,6 @@ input:focus,textarea:focus{outline:none}
 .scrub-val.side{font-size:1rem;opacity:.5}
 .scrub-val.center{font-size:2.1rem;color:var(--sage-dk);opacity:1}
 
-/* Korean mode */
 #koreanCard{display:none}
 #koreanCard.show{display:block}
 .korean-input{width:100%;min-height:90px;padding:12px;border:1.5px solid var(--line);border-radius:12px;background:var(--card-soft);resize:vertical;font-size:1rem;line-height:1.55}
@@ -239,19 +232,15 @@ input:focus,textarea:focus{outline:none}
 .rec-info{font-size:.82rem;color:var(--ink-soft);margin-top:6px;display:none}
 .rec-info.show{display:block}
 
-/* Toast */
 .toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(40,30,20,.92);color:#fff;padding:11px 18px;border-radius:24px;font-size:.88rem;z-index:1000;opacity:0;transition:opacity .25s;max-width:90vw;text-align:center;pointer-events:none}
 .toast.show{opacity:1}
 
-/* Scroll top button */
 #scrollTopBtn{position:fixed;right:18px;bottom:24px;width:46px;height:46px;border-radius:50%;background:rgba(168,196,162,.4);color:#fff;display:none;align-items:center;justify-content:center;z-index:80;box-shadow:0 4px 12px rgba(80,70,50,.15);backdrop-filter:blur(6px)}
 #scrollTopBtn.show{display:flex}
 #scrollTopBtn svg{width:20px;height:20px;stroke:#fff;fill:none;stroke-width:2.6;stroke-linecap:round}
 
-/* Hidden YT */
 #ytPlayer{position:fixed;left:-9999px;top:-9999px;width:1px;height:1px}
 
-/* File modal */
 .file-preview{padding:14px;background:var(--card-soft);border-radius:10px;font-size:.85rem;color:var(--ink-soft);max-height:60vh;overflow:auto;white-space:pre-wrap}
 
 @media(max-width:520px){
@@ -289,7 +278,6 @@ input:focus,textarea:focus{outline:none}
           </button>
           <input id="fileInput" type="file" accept=".txt,.pdf,.docx,.doc,image/*" style="display:none">
           <button class="btn btn-ghost btn-mini" id="cancelBtn" style="display:none">취소</button>
-          <button class="btn btn-ghost btn-mini" id="saveBtn" style="display:none">저장</button>
         </div>
       </div>
 
@@ -322,7 +310,6 @@ input:focus,textarea:focus{outline:none}
   </main>
 </div>
 
-<!-- Side panel -->
 <div class="side-overlay" id="sideOverlay"></div>
 <aside class="side-panel" id="sidePanel">
   <button class="side-close" id="sideCloseBtn"><svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button>
@@ -340,6 +327,10 @@ input:focus,textarea:focus{outline:none}
     <button class="opt-chip active" data-gender="female">여성</button>
     <button class="opt-chip" data-gender="male">남성</button>
   </div>
+
+  <h4>보이스 캐릭터 (미국 발음)</h4>
+  <div class="opt-group" id="voiceCharGroup"></div>
+  <div id="voiceCharNote" style="font-size:.74rem;color:var(--ink-mute);margin-top:6px"></div>
 
   <h4>재생 속도</h4>
   <div class="opt-group" id="speedGroup">
@@ -382,7 +373,6 @@ input:focus,textarea:focus{outline:none}
   <div class="doc-list" id="docList"></div>
 </aside>
 
-<!-- Generate modal -->
 <div class="gen-overlay" id="genOverlay">
   <div class="gen-modal">
     <button class="gen-close" id="genCloseBtn"><svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button>
@@ -432,7 +422,6 @@ input:focus,textarea:focus{outline:none}
   </div>
 </div>
 
-<!-- File preview modal -->
 <div class="gen-overlay" id="fileOverlay">
   <div class="gen-modal">
     <button class="gen-close" id="fileCloseBtn"><svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button>
@@ -441,7 +430,6 @@ input:focus,textarea:focus{outline:none}
   </div>
 </div>
 
-<!-- Word modal stack -->
 <div class="wmodal-overlay" id="wmOverlay"></div>
 <div class="wmodal-stack" id="wmStack"></div>
 
@@ -450,12 +438,11 @@ input:focus,textarea:focus{outline:none}
 </button>
 
 <div class="toast" id="toast"></div>
-
 <div id="ytPlayer"></div>
 
 <script>
 /* ============================================================
-   Part 1/2 : 상태, IndexedDB, Gemini 큐, TTS, YouTube, 워밍 큐
+   Part 1 : State / IndexedDB / Gemini Queue / TTS Voice Engine
    ============================================================ */
 const $ = (s, r=document) => r.querySelector(s);
 const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
@@ -464,8 +451,10 @@ const STATE = {
   fontSize: 16,
   speed: 1.0,
   gender: 'female',
+  voiceChar: 'natural1',   // natural1 | natural2 | classic
   voiceMode: 'tts',
   voices: [],
+  voiceCatalog: { female: [], male: [] },
   currentUtter: null,
   currentPlayingBtn: null,
   db: null,
@@ -499,13 +488,15 @@ const STATE = {
   genFormat: 'Essay',
   genWords: 1000,
   recognizer: null,
+  wordMemCache: new Map(),
+  wordPrefetchPending: new Set(),
+  resumingDocs: new Set(),
 };
 
 const GEMINI_MIN_INTERVAL = 10000;
 const WORD_BATCH_SIZE = 8;
 const WARMUP_INTERVAL = 10000;
 
-/* ---------- Toast / Status ---------- */
 function toast(msg, ms=2400){
   const t=$('#toast'); if(!t) return;
   t.textContent=msg; t.classList.add('show');
@@ -523,10 +514,8 @@ function safeJsonParse(txt, fallback){
   const lastBrace=Math.max(s.lastIndexOf(']'),s.lastIndexOf('}'));
   if(lastBrace>0) s=s.slice(0,lastBrace+1);
   try{ return JSON.parse(s); }catch(e){
-    try{
-      const fixed=s.replace(/,\s*([}\]])/g,'$1');
-      return JSON.parse(fixed);
-    }catch(e2){ return fallback; }
+    try{ return JSON.parse(s.replace(/,\s*([}\]])/g,'$1')); }
+    catch(e2){ return fallback; }
   }
 }
 
@@ -580,11 +569,119 @@ async function processGeminiQueue(){
   }
   STATE.geminiBusy=false;
 }
+async function callGeminiDirect(body){
+  const res=await fetch('/api/gemini',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  if(!res.ok){ const t=await res.text(); throw new Error(`Gemini ${res.status}: ${t.slice(0,200)}`); }
+  return res.json();
+}
 
-/* ---------- TTS ---------- */
-const FEMALE_US_WHITELIST=['Samantha','Google US English','Microsoft Aria Online (Natural) - English (United States)','Microsoft Aria','Microsoft Jenny Online (Natural) - English (United States)','Microsoft Jenny','Microsoft Zira','Ava','Allison','Susan','Karen','Microsoft Michelle','Nicky','Princess','Vicki'];
-const MALE_US_WHITELIST=['Alex','Fred','Microsoft Guy Online (Natural) - English (United States)','Microsoft Guy','Microsoft Christopher Online (Natural) - English (United States)','Microsoft Christopher','Microsoft Davis','Microsoft Davis Online (Natural) - English (United States)','Aaron','Tom','Bruce','Microsoft Mark','Microsoft Eric','Microsoft Roger'];
-const UK_BLOCKLIST=['Daniel','Oliver','Arthur','Kate','Serena','Moira','Microsoft Hazel','Microsoft Susan','Microsoft George','Microsoft Ryan','Microsoft Sonia','Microsoft Libby'];
+/* ============================================================
+   TTS Voice Engine - 미국 발음, 남/여 각 3종 캐릭터
+   품질 우선순위 :
+     1) Microsoft Online (Natural) - Edge / Windows
+     2) Apple Enhanced/Premium - Samantha, Alex
+     3) Google US English - Chrome
+     4) 기타 en-US
+   ============================================================ */
+
+/* 각 슬롯별 우선순위 패턴 매칭 */
+const VOICE_SLOTS = {
+  female: [
+    {
+      key: 'natural1',
+      label: 'Aria',
+      desc: 'Natural · 차분',
+      patterns: [
+        /Microsoft Aria Online \(Natural\)/i,
+        /Microsoft Aria/i,
+        /^Aria/i,
+        /Samantha.*\(Premium\)/i,
+        /Samantha.*\(Enhanced\)/i,
+        /Samantha/i,
+        /Google US English/i,
+      ]
+    },
+    {
+      key: 'natural2',
+      label: 'Jenny',
+      desc: 'Natural · 친근',
+      patterns: [
+        /Microsoft Jenny Online \(Natural\)/i,
+        /Microsoft Jenny/i,
+        /^Jenny/i,
+        /Microsoft Michelle Online \(Natural\)/i,
+        /Microsoft Michelle/i,
+        /Ava.*\(Premium\)/i,
+        /Ava.*\(Enhanced\)/i,
+        /^Ava/i,
+        /Allison/i,
+      ]
+    },
+    {
+      key: 'classic',
+      label: 'Samantha',
+      desc: 'Classic · 정통',
+      patterns: [
+        /Samantha.*\(Enhanced\)/i,
+        /Samantha.*\(Premium\)/i,
+        /^Samantha/i,
+        /Microsoft Zira/i,
+        /^Zira/i,
+        /Susan/i,
+        /Karen.*en[-_]US/i,
+        /Vicki/i,
+      ]
+    }
+  ],
+  male: [
+    {
+      key: 'natural1',
+      label: 'Guy',
+      desc: 'Natural · 차분',
+      patterns: [
+        /Microsoft Guy Online \(Natural\)/i,
+        /Microsoft Guy/i,
+        /^Guy/i,
+        /Microsoft Davis Online \(Natural\)/i,
+        /Microsoft Davis/i,
+      ]
+    },
+    {
+      key: 'natural2',
+      label: 'Christopher',
+      desc: 'Natural · 활기',
+      patterns: [
+        /Microsoft Christopher Online \(Natural\)/i,
+        /Microsoft Christopher/i,
+        /^Christopher/i,
+        /Microsoft Eric Online \(Natural\)/i,
+        /Microsoft Eric/i,
+        /Microsoft Roger Online \(Natural\)/i,
+        /Microsoft Roger/i,
+        /Tom.*\(Premium\)/i,
+        /^Tom/i,
+      ]
+    },
+    {
+      key: 'classic',
+      label: 'Alex',
+      desc: 'Classic · 정통',
+      patterns: [
+        /Alex.*\(Enhanced\)/i,
+        /Alex.*\(Premium\)/i,
+        /^Alex$/i,
+        /^Alex /i,
+        /Microsoft David/i,
+        /^David/i,
+        /^Fred/i,
+        /Aaron/i,
+        /Bruce/i,
+      ]
+    }
+  ]
+};
+
+const UK_BLOCKLIST_RE = /(en[-_]GB)|Daniel|Oliver|Arthur|Kate|Serena|Moira|Hazel|^George|Ryan|Sonia|Libby/i;
 
 function loadVoices(){
   return new Promise(resolve=>{
@@ -594,37 +691,93 @@ function loadVoices(){
     };
     get();
     if(STATE.voices.length===0){
-      speechSynthesis.onvoiceschanged=()=>{ get(); };
-      setTimeout(()=>{ if(STATE.voices.length===0){ STATE.voices=speechSynthesis.getVoices(); resolve(STATE.voices); } },1200);
+      speechSynthesis.onvoiceschanged=()=>{ get(); buildVoiceCatalog(); renderVoiceCharGroup(); };
+      setTimeout(()=>{ if(STATE.voices.length===0){ STATE.voices=speechSynthesis.getVoices(); resolve(STATE.voices); } },1500);
     } else resolve(STATE.voices);
   });
 }
-function pickVoice(){
-  const voices=STATE.voices||speechSynthesis.getVoices();
-  if(!voices || voices.length===0) return null;
-  const isUK=v=>UK_BLOCKLIST.some(n=>v.name && v.name.includes(n)) || (v.lang||'').toLowerCase().includes('en-gb');
-  const list=STATE.gender==='male'?MALE_US_WHITELIST:FEMALE_US_WHITELIST;
-  for(const name of list){
-    const v=voices.find(x=>x.name===name && !isUK(x));
-    if(v) return v;
+
+function buildVoiceCatalog(){
+  const voices = STATE.voices || speechSynthesis.getVoices() || [];
+  // en-US 후보만 필터
+  const usOnly = voices.filter(v=>{
+    const lang=(v.lang||'').toLowerCase();
+    if(UK_BLOCKLIST_RE.test(v.name||'')) return false;
+    return lang==='en-us' || lang.startsWith('en-us') || lang==='en_us' || (lang.startsWith('en') && /US|United States/i.test(v.name||''));
+  });
+  for (const gender of ['female','male']) {
+    STATE.voiceCatalog[gender] = VOICE_SLOTS[gender].map(slot=>{
+      let matched = null;
+      for (const pat of slot.patterns) {
+        matched = usOnly.find(v => pat.test(v.name||''));
+        if (matched) break;
+      }
+      // 추가 폴백: en-US 중 성별 휴리스틱
+      if (!matched) {
+        if (gender === 'male') {
+          matched = usOnly.find(v => /male|guy|david|mark|aaron|tom|eric|roger|christopher|davis|alex|fred/i.test(v.name||''));
+        } else {
+          matched = usOnly.find(v => /female|aria|jenny|zira|samantha|allison|ava|susan|karen|michelle|vicki/i.test(v.name||''));
+        }
+      }
+      if (!matched && usOnly.length) matched = usOnly[0];
+      if (!matched) matched = voices.find(v=>(v.lang||'').toLowerCase().startsWith('en')) || voices[0] || null;
+      return {
+        key: slot.key,
+        label: slot.label,
+        desc: slot.desc,
+        voice: matched || null,
+        voiceName: matched ? matched.name : '(미지원)'
+      };
+    });
   }
-  for(const name of list){
-    const v=voices.find(x=>x.name && x.name.includes(name) && !isUK(x));
-    if(v) return v;
-  }
-  const us=voices.filter(v=>(v.lang||'').toLowerCase()==='en-us' && !isUK(v));
-  if(us.length){
-    if(STATE.gender==='male'){
-      const m=us.find(v=>/male|guy|david|mark|aaron|tom|eric|roger|christopher|davis|alex|fred/i.test(v.name));
-      if(m) return m;
-    } else {
-      const f=us.find(v=>/female|aria|jenny|zira|samantha|allison|ava|susan|karen|michelle|vicki/i.test(v.name));
-      if(f) return f;
-    }
-    return us[0];
-  }
-  return voices.find(v=>(v.lang||'').toLowerCase().startsWith('en') && !isUK(v)) || voices[0];
 }
+
+function getActiveVoice(){
+  const list = STATE.voiceCatalog[STATE.gender] || [];
+  const found = list.find(x=>x.key===STATE.voiceChar);
+  if (found && found.voice) return found.voice;
+  if (list.length && list[0].voice) return list[0].voice;
+  // 최종 폴백
+  const voices = STATE.voices || speechSynthesis.getVoices() || [];
+  return voices.find(v=>(v.lang||'').toLowerCase().startsWith('en-us')) || voices[0] || null;
+}
+
+function renderVoiceCharGroup(){
+  const wrap = $('#voiceCharGroup'); if (!wrap) return;
+  const list = STATE.voiceCatalog[STATE.gender] || [];
+  wrap.innerHTML = list.map(item=>{
+    const active = item.key===STATE.voiceChar ? 'active' : '';
+    const disabled = !item.voice ? 'disabled' : '';
+    return `<button class="voice-chip ${active} ${disabled}" data-vc="${item.key}">
+      <span class="vc-name">${escapeHtml(item.label)}</span>
+      <span class="vc-desc">${escapeHtml(item.desc)}</span>
+    </button>`;
+  }).join('');
+  wrap.querySelectorAll('.voice-chip').forEach(b=>{
+    b.addEventListener('click',()=>{
+      const k = b.dataset.vc;
+      const slot = list.find(x=>x.key===k);
+      if (!slot || !slot.voice) { toast('이 브라우저에서 사용할 수 있는 음성이 없습니다'); return; }
+      STATE.voiceChar = k;
+      localStorage.setItem('ts_voiceChar', k);
+      wrap.querySelectorAll('.voice-chip').forEach(x=>x.classList.toggle('active', x===b));
+      stopSpeaking();
+      updateVoiceCharNote();
+      // 미리듣기
+      speak('Hello, this is your voice preview.');
+    });
+  });
+  updateVoiceCharNote();
+}
+function updateVoiceCharNote(){
+  const note = $('#voiceCharNote'); if (!note) return;
+  const list = STATE.voiceCatalog[STATE.gender] || [];
+  const sel = list.find(x=>x.key===STATE.voiceChar) || list[0];
+  if (sel) note.textContent = `현재: ${sel.voiceName || '(미지원)'}`;
+  else note.textContent = '';
+}
+
 function stopSpeaking(){
   try{ speechSynthesis.cancel(); }catch(e){}
   if(STATE.currentPlayingBtn){ updatePlayBtnState(STATE.currentPlayingBtn,false); STATE.currentPlayingBtn=null; }
@@ -638,7 +791,7 @@ function speak(text, opts={}){
     const u=new SpeechSynthesisUtterance(text);
     u.lang='en-US';
     u.rate=opts.rate || STATE.speed;
-    const v=pickVoice();
+    const v=getActiveVoice();
     if(v) u.voice=v;
     u.onend=()=>{ if(opts.btn) updatePlayBtnState(opts.btn,false); STATE.currentPlayingBtn=null; STATE.currentUtter=null; resolve(); };
     u.onerror=()=>{ if(opts.btn) updatePlayBtnState(opts.btn,false); STATE.currentPlayingBtn=null; STATE.currentUtter=null; resolve(); };
@@ -718,7 +871,7 @@ function startWarmupForDoc(doc){
   doc.sentences.forEach(s=>{ if(!s.hardListening) STATE.warmupQueue.push({type:'hard',sid:s.id,priority:2}); });
   const haveWords=new Set(Object.keys(doc.wordData||{}));
   const pending=new Set();
-  doc.sentences.forEach(s=>{ (s.words||[]).forEach(w=>{ const nw=normalizeWord(w); if(nw && !haveWords.has(nw)) pending.add(nw); }); });
+  doc.sentences.forEach(s=>{ (s.words||[]).forEach(w=>{ const nw=normalizeWord(w); if(nw && !haveWords.has(nw) && !STATE.wordMemCache.has(nw)) pending.add(nw); }); });
   const arr=Array.from(pending);
   for(let i=0;i<arr.length;i+=WORD_BATCH_SIZE){
     STATE.warmupQueue.push({type:'words',words:arr.slice(i,i+WORD_BATCH_SIZE),priority:3});
@@ -755,8 +908,12 @@ async function processWarmup(){
   if(STATE.userActionActive || STATE.warmupPaused){
     setTimeout(processWarmup,1500); return;
   }
-  // Prioritize visible
-  let idx=STATE.warmupQueue.findIndex(it=>it.type==='hard' && STATE.visibleSentences.has(it.sid));
+  // 가시 영역의 문장(hard) → 가시 영역의 단어 → 그 외 순으로 우선
+  let idx = STATE.warmupQueue.findIndex(it=>it.type==='hard' && STATE.visibleSentences.has(it.sid));
+  if(idx<0){
+    const visibleWords = collectVisibleWords();
+    idx = STATE.warmupQueue.findIndex(it=>it.type==='words' && it.words.some(w=>visibleWords.has(w)));
+  }
   if(idx<0) idx=0;
   const item=STATE.warmupQueue.splice(idx,1)[0];
   try{
@@ -766,32 +923,42 @@ async function processWarmup(){
   updateWarmupBar();
   setTimeout(processWarmup, WARMUP_INTERVAL);
 }
+function collectVisibleWords(){
+  const set = new Set();
+  const doc = STATE.currentDoc; if (!doc) return set;
+  for (const sid of STATE.visibleSentences) {
+    const s = doc.sentences.find(x=>x.id===sid); if (!s) continue;
+    (s.words||[]).forEach(w=>{ const n = normalizeWord(w); if (n) set.add(n); });
+  }
+  return set;
+}
 async function fetchHardListening(sid){
   const doc=STATE.currentDoc; if(!doc) return;
   const s=doc.sentences.find(x=>x.id===sid); if(!s || s.hardListening) return;
   const prompt=`You are an American English pronunciation coach. For the sentence below, identify EVERY phonetic feature that makes it hard to hear for Korean learners. Cover ALL of: silent letters, liaison/linking, contractions, function-word reduction (the, a, of, to, for, that, and, but, can, was, were, have, has, had, am, are, is, will, would, should...), stress shift, weak forms, schwa reduction, intrusive sounds, flap T, dropped T/D, idiomatic phrases. Quote the EXACT word or phrase from the sentence.\n\nReturn JSON array ONLY:\n[{"quote":"exact phrase from sentence","type":"silent|liaison|contraction|reduction|stress|weak|schwa|flap|drop|idiom|rhythm|intonation","phonetic":"IPA or simplified [American]","desc":"Korean explanation, 1-2 sentences, very specific"}]\n\nList every relevant feature. Do not skip any.\n\nSentence: "${s.text}"`;
   const body={contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{temperature:0.3,maxOutputTokens:2048,responseMimeType:'application/json'}};
-  const res=await callGemini(body,{priority:item_priority(2)});
+  const res=await callGemini(body,{priority:2});
   const txt=res?.candidates?.[0]?.content?.parts?.[0]?.text||'[]';
   const arr=safeJsonParse(txt,[]);
   s.hardListening=Array.isArray(arr)?arr:[];
   await dbPut('documents',doc).catch(()=>{});
-  // refresh open block if any
   const block=document.querySelector(`[data-hard-for="${sid}"]`);
   if(block && block.classList.contains('show')) renderHardListeningInto(block, s.hardListening);
 }
-function item_priority(p){return p;}
 async function fetchWordBatch(words){
   const doc=STATE.currentDoc; if(!doc) return;
   doc.wordData=doc.wordData||{};
-  const need=words.filter(w=>!doc.wordData[w]);
+  const need = words.filter(w=>!doc.wordData[w] && !STATE.wordMemCache.has(w));
   if(need.length===0) return;
-  // Try IndexedDB cache first
-  const fromCache={};
+  // IDB 1차
+  const stillNeed=[];
   for(const w of need){
-    try{ const c=await dbGet('words',w); if(c){ fromCache[w]=c.data; doc.wordData[w]=c.data; } }catch(e){}
+    try{
+      const c=await dbGet('words',w);
+      if(c && c.data){ STATE.wordMemCache.set(w,c.data); doc.wordData[w]=c.data; }
+      else stillNeed.push(w);
+    }catch(e){ stillNeed.push(w); }
   }
-  const stillNeed=need.filter(w=>!fromCache[w]);
   if(stillNeed.length===0){ await dbPut('documents',doc).catch(()=>{}); return; }
   const prompt=`For each English word below, return detailed info. Use American English. Return JSON array ONLY:\n[{"word":"...","pos":"noun|verb|adj|adv|prep|conj|pron|det|interj","ipa":"American IPA","meaningKo":"Korean meaning","morphKo":"Korean morpheme analysis if applicable","synonyms":["..."],"antonyms":["..."],"examples":[{"en":"...","ko":"..."}]}]\n\nWords: ${stillNeed.join(', ')}`;
   const body={contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{temperature:0.3,maxOutputTokens:4096,responseMimeType:'application/json'}};
@@ -804,30 +971,24 @@ async function fetchWordBatch(words){
       const key=normalizeWord(item.word);
       if(!key) continue;
       doc.wordData[key]=item;
+      STATE.wordMemCache.set(key,item);
       try{ await dbPut('words',{word:key,data:item,ts:Date.now()}); }catch(e){}
     }
   }
   await dbPut('documents',doc).catch(()=>{});
 }
 
-/* ---------- Direct Gemini (out-of-queue, for instant user actions) ---------- */
-async function callGeminiDirect(body){
-  const res=await fetch('/api/gemini',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-  if(!res.ok){ const t=await res.text(); throw new Error(`Gemini ${res.status}: ${t.slice(0,200)}`); }
-  return res.json();
-}
-
-/* ---------- Progress UI ---------- */
+/* ---------- Progress ---------- */
 function showProgress(pct, text){ const c=$('#progressCard'); if(c) c.style.display='block'; updateProgress(pct,text); }
 function updateProgress(pct,text){ const b=$('#progressBar'); const t=$('#progressText'); if(b) b.style.width=Math.max(0,Math.min(100,pct))+'%'; if(t && text) t.textContent=text; }
 function hideProgress(){ const c=$('#progressCard'); if(c) c.style.display='none'; }
 </script>
+
 <script>
 /* ============================================================
-   Part 2/2 : 입력 / 분석 / 렌더 / 단어장 / 한국어 / 문서목록 / 생성모달 / 초기화
+   Part 2 : Input / Analyze / Render / Word Modal / Resume / etc.
    ============================================================ */
 
-/* ---------- 입력 라우팅 ---------- */
 async function handleAnalyze(){
   const input=$('#urlInput')?.value?.trim();
   if(!input){ toast('URL 또는 텍스트를 입력하세요'); return; }
@@ -898,7 +1059,7 @@ function splitSentences(t){
   return r.map(s=>s.trim()).filter(s=>s.length>2);
 }
 
-/* ---------- 분석 파이프라인 ---------- */
+/* ---------- analyzeText (문장 단위 즉시 저장) ---------- */
 async function analyzeText(text, meta={}){
   stopWarmup();
   STATE.sentences=[]; STATE.analyzing=true; STATE.currentFullText=text;
@@ -914,6 +1075,11 @@ async function analyzeText(text, meta={}){
     videoId:meta.videoId||null,
     segments:meta.segments||[],
     fullText:text,
+    sourceText:text,
+    pendingSentences:sentences.slice(),
+    totalSentences:sentences.length,
+    lastCompletedIndex:-1,
+    analysisStatus:'in_progress',
     fileName:meta.fileName||null,
     fileType:meta.fileType||null,
     sentences:[],
@@ -926,31 +1092,64 @@ async function analyzeText(text, meta={}){
   if(STATE.currentRawFile){
     try{ await dbPut('files',{docId,blob:STATE.currentRawFile,name:STATE.currentRawFile.name,type:STATE.currentRawFile.type}); }catch(e){ console.warn('파일 저장 실패',e); }
   }
-  const saveBtn=$('#saveBtn'); if(saveBtn) saveBtn.style.display='inline-block';
+  await runAnalysisLoop(doc, sentences, 0);
+}
 
-  const CHUNK=8, total=sentences.length; let done=0;
-  showProgress(0,`0/${total} 문장 분석 중`);
-  for(let i=0;i<sentences.length;i+=CHUNK){
-    if(!STATE.analyzing) break;
+async function runAnalysisLoop(doc, sentences, startIdx){
+  const CHUNK=8, total=sentences.length;
+  let done=startIdx;
+  showProgress((done/total)*100, `${done}/${total} 문장 분석 중`);
+  for(let i=startIdx;i<sentences.length;i+=CHUNK){
+    if(!STATE.analyzing){
+      doc.analysisStatus='aborted';
+      await dbPut('documents',doc).catch(()=>{});
+      break;
+    }
     const chunk=sentences.slice(i,i+CHUNK);
     updateProgress((done/total)*100,`${done}/${total} 문장 분석 중`);
     try{
       const analyzed=await analyzeChunk(chunk);
       for(let idx=0;idx<analyzed.length;idx++){
         const s=analyzed[idx];
-        const obj={id:`${docId}_${i+idx}`,index:i+idx,number:i+idx+1,text:s.text||chunk[idx],translationLiteral:s.translationLiteral||'',translationNatural:s.translationNatural||'',words:Array.isArray(s.words)?s.words:[],hardListening:null};
-        STATE.sentences.push(obj); doc.sentences.push(obj);
+        const obj={
+          id:`${doc.id}_${i+idx}`,
+          index:i+idx,
+          number:i+idx+1,
+          text:s.text||chunk[idx],
+          translationLiteral:s.translationLiteral||'',
+          translationNatural:s.translationNatural||'',
+          words:Array.isArray(s.words)?s.words:[],
+          hardListening:null
+        };
+        STATE.sentences.push(obj);
+        doc.sentences.push(obj);
+        doc.lastCompletedIndex = i+idx;
         renderSentenceBlock(obj);
+        // 문장 1개마다 즉시 저장
+        await dbPut('documents',doc).catch(()=>{});
       }
       done+=chunk.length;
-    }catch(err){ console.error('chunk 분석 실패',err); toast(`청크 분석 실패 (${i+1}~${i+chunk.length})`); }
-    await dbPut('documents',doc).catch(()=>{});
+    }catch(err){
+      console.error('chunk 분석 실패',err);
+      toast(`청크 분석 실패 (${i+1}~${i+chunk.length})`);
+      doc.analysisStatus='aborted';
+      await dbPut('documents',doc).catch(()=>{});
+    }
   }
+  // 완료 처리
+  if (doc.lastCompletedIndex >= total-1) {
+    doc.analysisStatus = 'completed';
+    doc.pendingSentences = [];
+  } else {
+    if (doc.analysisStatus !== 'aborted') doc.analysisStatus = 'in_progress';
+  }
+  await dbPut('documents',doc).catch(()=>{});
   STATE.analyzing=false; hideProgress(); updateOriginalModeAvailability();
-  setStatus(`분석 완료 (${STATE.sentences.length}문장)`);
+  setStatus(`분석 완료 (${STATE.sentences.length}/${total}문장)`);
   refreshDocList(); updateStorageInfo();
   startWarmupForDoc(doc);
 }
+
 async function analyzeChunk(sentences){
   const prompt=`You are an American English to Korean translator. For each sentence below, ALWAYS provide BOTH a literal Korean translation AND a natural Korean translation. NEVER leave either translation empty.\n\nReturn EXACTLY this JSON array (no other text):\n[{"text":"original English sentence","translationLiteral":"직역 Korean","translationNatural":"의역 Korean","words":["meaningful","content","words"]}]\n\nRules:\n- translationLiteral: word-for-word literal Korean\n- translationNatural: natural fluent Korean\n- words: 3-8 meaningful content words from the sentence (no articles/be-verbs)\n- Both translations are MANDATORY. Never return empty strings.\n\nSentences:\n${sentences.map((s,i)=>`${i+1}. ${s}`).join('\n')}`;
   const body={contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{temperature:0.4,maxOutputTokens:4096,responseMimeType:'application/json'}};
@@ -962,7 +1161,6 @@ async function analyzeChunk(sentences){
     const s=sentences[parsed.length];
     parsed.push({text:s,translationLiteral:'',translationNatural:'',words:s.split(/\s+/).filter(w=>w.length>2).slice(0,6)});
   }
-  // Fallback for empty translations
   for(let i=0;i<parsed.length;i++){
     if(!parsed[i].text) parsed[i].text=sentences[i];
     if(!parsed[i].translationLiteral || !parsed[i].translationNatural){
@@ -984,6 +1182,69 @@ async function quickTranslateBoth(text){
   const txt=res?.candidates?.[0]?.content?.parts?.[0]?.text||'{}';
   const obj=safeJsonParse(txt,{});
   return {literal:obj.literal||'',natural:obj.natural||''};
+}
+
+/* ---------- Resume analysis ---------- */
+async function resumeAnalysis(docId){
+  if(STATE.resumingDocs.has(docId)){ toast('이미 이어 분석 진행 중입니다'); return; }
+  const doc=await dbGet('documents',docId);
+  if(!doc){ toast('문서를 찾을 수 없습니다'); return; }
+  // 원본 텍스트 복구
+  let sourceText = doc.sourceText || doc.fullText;
+  if (!sourceText) {
+    // 파일에서 재추출
+    const rec = await dbGet('files', docId);
+    if (rec && rec.blob) {
+      try{
+        const f = new File([rec.blob], rec.name||'file', {type: rec.type||''});
+        const name = (rec.name||'').toLowerCase();
+        if(name.endsWith('.txt')) sourceText=await f.text();
+        else if(name.endsWith('.pdf')) sourceText=await extractPdfText(f);
+        else if(name.endsWith('.docx')||name.endsWith('.doc')){
+          const buf=await f.arrayBuffer();
+          const result=await mammoth.extractRawText({arrayBuffer:buf});
+          sourceText=result.value;
+        } else if((rec.type||'').startsWith('image/')){
+          const result=await Tesseract.recognize(f,'eng+kor');
+          sourceText=result.data.text;
+        }
+      }catch(e){ toast('원본 파일 복원 실패: '+e.message); return; }
+    }
+  }
+  if(!sourceText){ toast('원본을 복원할 수 없습니다'); return; }
+  const sentences = doc.pendingSentences && doc.pendingSentences.length === doc.totalSentences
+    ? doc.pendingSentences
+    : splitSentences(sourceText);
+  const startIdx = (typeof doc.lastCompletedIndex === 'number' ? doc.lastCompletedIndex : -1) + 1;
+  if(startIdx >= sentences.length){ toast('이미 분석이 완료되었습니다'); doc.analysisStatus='completed'; await dbPut('documents',doc).catch(()=>{}); refreshDocList(); return; }
+
+  STATE.resumingDocs.add(docId);
+  stopWarmup();
+  STATE.currentDoc = doc;
+  STATE.currentDocId = doc.id;
+  STATE.sentences = doc.sentences.slice();
+  STATE.ytSegments = doc.segments||[]; STATE.currentVideoId = doc.videoId||null;
+  STATE.sourceType = doc.sourceType||'text';
+  if(doc.videoId && doc.segments?.length) await initYouTubePlayer(doc.videoId);
+
+  const container=$('#sentenceList'); if(container) container.innerHTML='';
+  STATE.sentences.forEach(s=>renderSentenceBlock(s));
+  updateOriginalModeAvailability();
+  closeSidePanel();
+  setStatus(`이어 분석: ${doc.title} (${startIdx}/${sentences.length}부터)`);
+  toast(`이어서 분석합니다 (${startIdx+1}번 문장부터)`);
+
+  doc.sourceText = sourceText;
+  doc.totalSentences = sentences.length;
+  doc.pendingSentences = sentences;
+  doc.analysisStatus = 'in_progress';
+  await dbPut('documents',doc).catch(()=>{});
+  STATE.analyzing = true;
+  try{
+    await runAnalysisLoop(doc, sentences, startIdx);
+  } finally {
+    STATE.resumingDocs.delete(docId);
+  }
 }
 
 /* ---------- Sentence rendering ---------- */
@@ -1013,6 +1274,10 @@ function renderSentenceBlock(s){
   card.querySelector('[data-act="follow"]').addEventListener('click',()=>handleFollowRead(s,card));
   card.querySelectorAll('.s-text .word').forEach(el=>{
     el.addEventListener('click',e=>{ e.stopPropagation(); const w=el.dataset.w; if(w) openWordModal(w); });
+    // 프리페치 (호버/터치 시작)
+    const prefetch = ()=>{ const w=el.dataset.w; if(w) prefetchWord(w); };
+    el.addEventListener('pointerenter', prefetch, {passive:true});
+    el.addEventListener('touchstart', prefetch, {passive:true});
   });
   list.appendChild(card);
   if(STATE.observer) STATE.observer.observe(card);
@@ -1029,7 +1294,6 @@ function renderClickableWords(text){
   }).join('');
 }
 async function handlePlayToggle(s, btn){
-  // Toggle: if this btn is currently playing → stop; else play
   if(STATE.currentPlayingBtn===btn){ stopSpeaking(); return; }
   stopSpeaking();
   STATE.userActionActive=true;
@@ -1077,12 +1341,12 @@ async function handleTranslateToggle(s, card){
   block.innerHTML=`
     <div class="tr-row">
       <div class="tr-label">직역</div>
-      <div class="tr-text">${renderKoClickable(s.translationLiteral)}</div>
+      <div class="tr-text">${escapeHtml(s.translationLiteral)}</div>
       <button class="tr-play" data-spk="ko"><svg viewBox="0 0 24 24"><polygon points="6 4 20 12 6 20 6 4"/></svg></button>
     </div>
     <div class="tr-row">
       <div class="tr-label">의역</div>
-      <div class="tr-text">${renderKoClickable(s.translationNatural)}</div>
+      <div class="tr-text">${escapeHtml(s.translationNatural)}</div>
       <button class="tr-play" data-spk="ko2"><svg viewBox="0 0 24 24"><polygon points="6 4 20 12 6 20 6 4"/></svg></button>
     </div>
   `;
@@ -1091,8 +1355,6 @@ async function handleTranslateToggle(s, card){
   b1.addEventListener('click',()=>speakKorean(s.translationLiteral,{btn:b1}));
   b2.addEventListener('click',()=>speakKorean(s.translationNatural,{btn:b2}));
 }
-function renderKoClickable(text){ return escapeHtml(text||''); }
-
 async function handleHardToggle(s, card){
   const block=card.querySelector(`[data-hard-for="${s.id}"]`);
   if(block.classList.contains('show')){ block.classList.remove('show'); return; }
@@ -1104,7 +1366,7 @@ async function handleHardToggle(s, card){
   block.innerHTML=`<div class="wm-loading"><div class="wm-spinner"></div>발음 분석 중...</div>`;
   STATE.userActionActive=true;
   try{
-    const prompt=`You are an American English pronunciation coach for Korean learners. For the sentence below, identify EVERY phonetic feature that makes it hard to hear. Cover ALL of: silent letters, liaison/linking, contractions, function-word reduction (the, a, of, to, for, that, and, but, can, was, were, have, has, had, am, are, is, will, would, should...), stress shift, weak forms, schwa reduction, intrusive sounds, flap T, dropped T/D, idiomatic phrases.\n\nQuote the EXACT word or phrase from the sentence in "quote".\n\nReturn JSON array ONLY:\n[{"quote":"exact phrase","type":"silent|liaison|contraction|reduction|stress|weak|schwa|flap|drop|idiom|rhythm|intonation","phonetic":"American IPA or [simplified]","desc":"한국어 설명, 매우 구체적으로 1-2문장"}]\n\nList every relevant feature, no limit on count.\n\nSentence: "${s.text}"`;
+    const prompt=`You are an American English pronunciation coach for Korean learners. For the sentence below, identify EVERY phonetic feature that makes it hard to hear. Cover ALL of: silent letters, liaison/linking, contractions, function-word reduction, stress shift, weak forms, schwa reduction, intrusive sounds, flap T, dropped T/D, idiomatic phrases.\n\nReturn JSON array ONLY:\n[{"quote":"exact phrase","type":"silent|liaison|contraction|reduction|stress|weak|schwa|flap|drop|idiom|rhythm|intonation","phonetic":"American IPA","desc":"한국어 설명"}]\n\nSentence: "${s.text}"`;
     const body={contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{temperature:0.3,maxOutputTokens:2048,responseMimeType:'application/json'}};
     const res=await callGeminiDirect(body);
     const txt=res?.candidates?.[0]?.content?.parts?.[0]?.text||'[]';
@@ -1129,8 +1391,6 @@ function renderHardListeningInto(block, items){
     </div>
   `).join('');
 }
-
-/* ---------- Follow-read ---------- */
 async function handleFollowRead(s, card){
   const block=card.querySelector(`[data-follow-for="${s.id}"]`);
   if(!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)){
@@ -1153,7 +1413,7 @@ async function handleFollowRead(s, card){
     STATE.userActionActive=false;
   };
   rec.onerror=e=>{
-    if(e.error==='not-allowed') block.innerHTML='<div class="wm-loading">마이크 권한이 거부되었습니다. 브라우저 설정에서 허용해주세요.</div>';
+    if(e.error==='not-allowed') block.innerHTML='<div class="wm-loading">마이크 권한이 거부되었습니다.</div>';
     else block.innerHTML=`<div class="wm-loading">인식 실패: ${escapeHtml(e.error||'')}</div>`;
     STATE.userActionActive=false;
   };
@@ -1169,25 +1429,50 @@ function calcSimilarity(a,b){
   return m/Math.max(A.length,B.length);
 }
 
-/* ---------- Word modal (stacked) ---------- */
+/* ---------- Word modal: 즉시 표시 ---------- */
 const POS_KR={noun:'명사',verb:'동사',adj:'형용사',adv:'부사',prep:'전치사',conj:'접속사',pron:'대명사',det:'관형사',interj:'감탄사'};
+
+function prefetchWord(word){
+  const w = normalizeWord(word); if (!w) return;
+  if (STATE.wordMemCache.has(w)) return;
+  if (STATE.wordPrefetchPending.has(w)) return;
+  STATE.wordPrefetchPending.add(w);
+  const run = async()=>{
+    try{
+      const c = await dbGet('words', w);
+      if (c && c.data){
+        STATE.wordMemCache.set(w, c.data);
+        if(STATE.currentDoc){ STATE.currentDoc.wordData = STATE.currentDoc.wordData||{}; STATE.currentDoc.wordData[w] = c.data; }
+      }
+    }catch(e){}
+    finally{ STATE.wordPrefetchPending.delete(w); }
+  };
+  if ('requestIdleCallback' in window) requestIdleCallback(run, {timeout: 200});
+  else setTimeout(run, 0);
+}
+
 function openWordModal(word){
   word=normalizeWord(word); if(!word) return;
   STATE.userActionActive=true;
-  const cached=getCachedWord(word);
+  // 셸을 0프레임에 표시
   const modal=createWordModal(word);
-  if(cached){ renderWordModalContent(modal, cached); }
-  else { modal.querySelector('.wm-body').innerHTML=`<div class="wm-loading"><div class="wm-spinner"></div>${escapeHtml(word)} 정보를 불러오는 중...</div>`; fetchAndRenderWord(word, modal); }
-}
-function getCachedWord(word){
-  if(STATE.currentDoc && STATE.currentDoc.wordData && STATE.currentDoc.wordData[word]) return STATE.currentDoc.wordData[word];
-  return null;
+  // 메모리 캐시 즉시 확인
+  const memHit = STATE.wordMemCache.get(word) || (STATE.currentDoc && STATE.currentDoc.wordData && STATE.currentDoc.wordData[word]);
+  if(memHit){
+    renderWordModalContent(modal, memHit);
+    return;
+  }
+  modal.querySelector('.wm-body').innerHTML=`
+    <div class="wm-head"><span class="wm-word">${escapeHtml(word)}</span></div>
+    <div class="wm-loading"><div class="wm-spinner"></div>정보를 불러오는 중...</div>
+  `;
+  fetchAndRenderWord(word, modal);
 }
 async function fetchAndRenderWord(word, modal){
   try{
-    // try IndexedDB
     const c=await dbGet('words',word);
     if(c && c.data){
+      STATE.wordMemCache.set(word, c.data);
       if(STATE.currentDoc){ STATE.currentDoc.wordData=STATE.currentDoc.wordData||{}; STATE.currentDoc.wordData[word]=c.data; await dbPut('documents',STATE.currentDoc).catch(()=>{}); }
       renderWordModalContent(modal,c.data); return;
     }
@@ -1199,11 +1484,11 @@ async function fetchAndRenderWord(word, modal){
     const txt=res?.candidates?.[0]?.content?.parts?.[0]?.text||'{}';
     const data=safeJsonParse(txt,{});
     if(!data || !data.word) data.word=word;
+    STATE.wordMemCache.set(word, data);
     try{ await dbPut('words',{word,data,ts:Date.now()}); }catch(e){}
     if(STATE.currentDoc){ STATE.currentDoc.wordData=STATE.currentDoc.wordData||{}; STATE.currentDoc.wordData[word]=data; await dbPut('documents',STATE.currentDoc).catch(()=>{}); }
     renderWordModalContent(modal,data);
   }catch(e){ modal.querySelector('.wm-body').innerHTML=`<div class="wm-loading">불러오기 실패: ${escapeHtml(e.message)}</div>`; }
-  finally{ STATE.userActionActive=false; }
 }
 function createWordModal(word){
   ensureWmOverlay();
@@ -1267,7 +1552,7 @@ function renderWordModalContent(modal, d){
   body.querySelectorAll('.ex-tr').forEach(b=>b.addEventListener('click',()=>{ const i=b.dataset.ex; const ko=body.querySelector(`[data-exko="${i}"]`); if(ko) ko.classList.toggle('show'); }));
 }
 
-/* ---------- 한국어 → 영어 ---------- */
+/* ---------- Korean → English ---------- */
 async function handleKoreanAnalyze(){
   const text=$('#koreanText')?.value?.trim();
   if(!text){ toast('한국어 문장을 입력하세요'); return; }
@@ -1281,7 +1566,6 @@ async function handleKoreanAnalyze(){
     const data=safeJsonParse(txt,{});
     hideProgress();
     renderKoreanResult(text,data);
-    // also feed natural English into main analysis
     if(data.english){
       STATE.currentRawFile=null;
       await analyzeText(data.english,{sourceType:'korean',title:titleFromText(data.english)});
@@ -1323,7 +1607,7 @@ function fileToBase64(file){
   return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>{ const s=r.result; const i=s.indexOf(','); res(i>=0?s.slice(i+1):s); }; r.onerror=rej; r.readAsDataURL(file); });
 }
 
-/* ---------- Recording (max 5 min) ---------- */
+/* ---------- Recording ---------- */
 async function startRecording(){
   try{
     const stream=await navigator.mediaDevices.getUserMedia({audio:true});
@@ -1376,16 +1660,21 @@ async function refreshDocList(){
   list.innerHTML=filtered.map(d=>{
     const sel=STATE.selectedDocs.has(d.id)?'selected':'';
     const date=d.createdAt?new Date(d.createdAt).toLocaleDateString():'';
-    const ready=d.warmupComplete?'<span class="doc-badge">준비완료</span>':'';
+    const status = d.analysisStatus || (d.warmupComplete ? 'completed' : 'in_progress');
+    const isResume = (status === 'in_progress' || status === 'aborted') && typeof d.totalSentences === 'number' && (d.lastCompletedIndex+1) < d.totalSentences;
+    const progress = d.totalSentences ? `${(d.lastCompletedIndex??-1)+1}/${d.totalSentences}` : `${(d.sentences||[]).length}문장`;
+    const readyBadge = status==='completed' && d.warmupComplete ? '<span class="doc-badge">준비완료</span>' : '';
+    const resumeBadge = isResume ? '<span class="doc-badge resume">미완료</span>' : '';
     const hasFile=d.fileName?'<span class="doc-badge" style="background:var(--warm);color:#7a5b1f">파일</span>':'';
     return `
       <div class="doc-item ${sel}" data-id="${d.id}">
         <input type="checkbox" class="doc-cb" ${STATE.selectedDocs.has(d.id)?'checked':''}>
         <div class="doc-info">
           <div class="doc-title">${escapeHtml(d.title||'제목 없음')}</div>
-          <div class="doc-meta"><span>${date}</span><span>${(d.sentences||[]).length}문장</span>${ready}${hasFile}</div>
+          <div class="doc-meta"><span>${date}</span><span>${progress}</span>${readyBadge}${resumeBadge}${hasFile}</div>
         </div>
         <div class="doc-actions">
+          ${isResume?`<button class="resume-btn" data-act="resume" title="이어 분석"><svg viewBox="0 0 24 24" stroke="#7a5b1f"><polygon points="6 4 20 12 6 20 6 4" fill="#7a5b1f"/></svg></button>`:''}
           ${d.fileName?`<button data-act="file" title="원본"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></button>`:''}
           <button data-act="open" title="열기"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></button>
           <button data-act="del" title="삭제"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/></svg></button>
@@ -1400,12 +1689,10 @@ async function refreshDocList(){
       item.classList.toggle('selected',e.target.checked);
     });
     item.querySelector('.doc-info').addEventListener('click',()=>openDocument(id));
-    const openBtn=item.querySelector('[data-act="open"]');
-    if(openBtn) openBtn.addEventListener('click',()=>openDocument(id));
-    const delBtn=item.querySelector('[data-act="del"]');
-    if(delBtn) delBtn.addEventListener('click',()=>deleteDocument(id));
-    const fileBtn=item.querySelector('[data-act="file"]');
-    if(fileBtn) fileBtn.addEventListener('click',()=>viewOriginalFile(id));
+    const openBtn=item.querySelector('[data-act="open"]'); if(openBtn) openBtn.addEventListener('click',()=>openDocument(id));
+    const delBtn=item.querySelector('[data-act="del"]'); if(delBtn) delBtn.addEventListener('click',()=>deleteDocument(id));
+    const fileBtn=item.querySelector('[data-act="file"]'); if(fileBtn) fileBtn.addEventListener('click',()=>viewOriginalFile(id));
+    const resumeBtn=item.querySelector('[data-act="resume"]'); if(resumeBtn) resumeBtn.addEventListener('click',()=>resumeAnalysis(id));
   });
   updateStorageInfo();
 }
@@ -1463,7 +1750,6 @@ async function viewOriginalFile(id){
   $('#fileOverlay').classList.add('show');
 }
 
-/* ---------- Storage info ---------- */
 async function updateStorageInfo(){
   try{
     const docs=await dbAll('documents'); const words=await dbAll('words');
@@ -1476,15 +1762,6 @@ async function updateStorageInfo(){
   }catch(e){}
 }
 
-/* ---------- Save current text as document ---------- */
-async function saveCurrentDocument(){
-  if(!STATE.currentDoc){ toast('저장할 문서가 없습니다'); return; }
-  await dbPut('documents',STATE.currentDoc).catch(()=>{});
-  toast('저장 완료');
-  refreshDocList();
-}
-
-/* ---------- Sentence visibility observer ---------- */
 function setupObserver(){
   if(STATE.observer) return;
   STATE.observer=new IntersectionObserver(entries=>{
@@ -1497,7 +1774,6 @@ function setupObserver(){
   },{rootMargin:'200px'});
 }
 
-/* ---------- Side panel ---------- */
 function openSidePanel(){ $('#sidePanel').classList.add('show'); $('#sideOverlay').classList.add('show'); refreshDocList(); }
 function closeSidePanel(){ $('#sidePanel').classList.remove('show'); $('#sideOverlay').classList.remove('show'); }
 
@@ -1555,7 +1831,7 @@ async function handleGenerate(){
   showProgress(20,'문장 생성 중...');
   try{
     const gradeDesc=getGradeDesc(grade);
-    const prompt=`Generate a ${fmt.toLowerCase()} in American English about "${topic}".\n\nTarget reader: US grade ${grade} (${gradeDesc}).\nStyle: ${style}.\nLength: about ${words} words (±10%).\n\nRequirements:\n- Use natural American English vocabulary and idioms actually used in the US.\n- Match difficulty (vocabulary, sentence length, grammar) to grade ${grade}.\n- NO slang, NO profanity, NO non-standard expressions.\n- Use clear, well-formed sentences.\n- For Dialogue format: use speaker labels.\n- For News format: use journalistic tone.\n- For Story format: include narrative arc.\n- For Essay format: include intro/body/conclusion.\n\nReturn the text ONLY, no JSON, no markdown, no preamble.`;
+    const prompt=`Generate a ${fmt.toLowerCase()} in American English about "${topic}".\n\nTarget reader: US grade ${grade} (${gradeDesc}).\nStyle: ${style}.\nLength: about ${words} words (±10%).\n\nRequirements:\n- Use natural American English vocabulary and idioms.\n- Match difficulty to grade ${grade}.\n- NO slang, NO profanity.\n- Clear, well-formed sentences.\n\nReturn the text ONLY.`;
     const body={contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{temperature:0.7,maxOutputTokens:8192}};
     const res=await callGeminiDirect(body);
     const text=(res?.candidates?.[0]?.content?.parts?.[0]?.text||'').trim();
@@ -1568,10 +1844,10 @@ async function handleGenerate(){
 function getGradeDesc(g){
   if(g==='K') return 'Kindergarten, very simple vocabulary, short sentences';
   const n=Number(g);
-  if(n>=1 && n<=2) return 'Early elementary, basic vocabulary, simple sentences';
-  if(n>=3 && n<=5) return 'Upper elementary, expanding vocabulary, compound sentences';
-  if(n>=6 && n<=8) return 'Middle school, varied vocabulary, complex sentences';
-  return 'High school, advanced vocabulary, sophisticated structures';
+  if(n>=1 && n<=2) return 'Early elementary, basic vocabulary';
+  if(n>=3 && n<=5) return 'Upper elementary';
+  if(n>=6 && n<=8) return 'Middle school';
+  return 'High school, advanced vocabulary';
 }
 function startGenRecognizer(){
   if(!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)){ toast('음성 인식 미지원'); return; }
@@ -1597,7 +1873,6 @@ function bindUI(){
   $('#analyzeBtn')?.addEventListener('click',handleAnalyze);
   $('#urlInput')?.addEventListener('keydown',e=>{ if(e.key==='Enter') handleAnalyze(); });
   $('#cancelBtn')?.addEventListener('click',()=>{ STATE.analyzing=false; stopSpeaking(); stopWarmup(); hideProgress(); toast('취소됨'); });
-  $('#saveBtn')?.addEventListener('click',saveCurrentDocument);
   $('#fileBtn')?.addEventListener('click',()=>$('#fileInput').click());
   $('#fileInput')?.addEventListener('change',e=>{ if(e.target.files[0]) handleFile(e.target.files[0]); e.target.value=''; });
 
@@ -1621,8 +1896,8 @@ function bindUI(){
       STATE.gender=b.dataset.gender;
       $('#genderGroup').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));
       localStorage.setItem('ts_gender',STATE.gender);
-      // immediate effect: cancel current speech, no need to reselect because pickVoice runs each speak
       stopSpeaking();
+      renderVoiceCharGroup();
       toast(`${STATE.gender==='male'?'남성':'여성'} 음성 적용`);
     });
   });
@@ -1655,7 +1930,6 @@ function bindUI(){
   $('#fileCloseBtn')?.addEventListener('click',()=>$('#fileOverlay').classList.remove('show'));
   $('#fileOverlay')?.addEventListener('click',e=>{ if(e.target.id==='fileOverlay') $('#fileOverlay').classList.remove('show'); });
 
-  // Generate modal
   $('#generateBtn')?.addEventListener('click',openGenModal);
   $('#genCloseBtn')?.addEventListener('click',closeGenModal);
   $('#genCancelBtn')?.addEventListener('click',closeGenModal);
@@ -1668,18 +1942,26 @@ function bindUI(){
   $('#styleGroup')?.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{ STATE.genStyle=b.dataset.style; $('#styleGroup').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b)); }));
   $('#formatGroup')?.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{ STATE.genFormat=b.dataset.fmt; $('#formatGroup').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b)); }));
 
-  // Scroll top
   const stb=$('#scrollTopBtn');
   window.addEventListener('scroll',()=>{ if(window.scrollY>300) stb.classList.add('show'); else stb.classList.remove('show'); });
   stb?.addEventListener('click',()=>window.scrollTo({top:0,behavior:'smooth'}));
 
-  // ESC closes top modal
   document.addEventListener('keydown',e=>{
     if(e.key==='Escape'){
       if(STATE.wmStack.length>0) popWordModal();
       else if($('#genOverlay').classList.contains('show')) closeGenModal();
       else if($('#fileOverlay').classList.contains('show')) $('#fileOverlay').classList.remove('show');
       else if($('#sidePanel').classList.contains('show')) closeSidePanel();
+    }
+  });
+
+  // 비정상 종료 마커
+  window.addEventListener('pagehide', ()=>{
+    if (STATE.currentDoc && STATE.analyzing) {
+      try{
+        STATE.currentDoc.analysisStatus = 'aborted';
+        dbPut('documents', STATE.currentDoc);
+      }catch(e){}
     }
   });
 }
@@ -1691,9 +1973,18 @@ function setFontSize(v){
   localStorage.setItem('ts_font',v);
 }
 
+/* ---------- Word cache preload ---------- */
+async function preloadWordCache(){
+  try{
+    const all = await dbAll('words');
+    for (const rec of all) {
+      if (rec && rec.word && rec.data) STATE.wordMemCache.set(rec.word, rec.data);
+    }
+  }catch(e){}
+}
+
 /* ---------- Init ---------- */
 async function init(){
-  // restore prefs
   const fs=Number(localStorage.getItem('ts_font'))||16; setFontSize(fs);
   const sp=Number(localStorage.getItem('ts_speed'))||1.0;
   STATE.speed=sp;
@@ -1703,6 +1994,8 @@ async function init(){
   STATE.gender=gd;
 
   $$('#genderGroup .opt-chip').forEach(b=>b.classList.toggle('active', b.dataset.gender===gd));
+  const vc=localStorage.getItem('ts_voiceChar')||'natural1';
+  STATE.voiceChar=vc;
 
   setupObserver();
   bindUI();
@@ -1710,7 +2003,13 @@ async function init(){
   try{ STATE.db=await openDB(); }catch(e){ console.error('DB open failed',e); }
   try{ await fetch('/api/health').catch(()=>{}); }catch(e){}
   await loadVoices();
-  // warm up voices
+  buildVoiceCatalog();
+  renderVoiceCharGroup();
+
+  // 단어 캐시를 메모리에 프리로드 → 단어장 즉시 표시
+  await preloadWordCache();
+
+  // 음성 워밍업
   try{ const u=new SpeechSynthesisUtterance(' '); u.volume=0; speechSynthesis.speak(u); }catch(e){}
 
   await refreshDocList();

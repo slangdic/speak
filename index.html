@@ -92,8 +92,9 @@ input:focus,textarea:focus{outline:none}
 .sentence-head{display:flex;align-items:flex-start;gap:10px;margin-bottom:8px}
 .s-num{flex-shrink:0;width:28px;height:28px;border-radius:50%;background:var(--sage-soft);color:var(--ink);font-size:.82rem;font-weight:700;display:flex;align-items:center;justify-content:center}
 .s-text{flex:1;font-size:1.02rem;line-height:1.6;color:var(--ink)}
-.s-text .word{cursor:pointer;border-bottom:1px dotted transparent;padding:1px 0;transition:background .15s}
+.s-text .word{cursor:pointer;border-bottom:1px dotted transparent;padding:1px 0;transition:background .15s,color .15s}
 .s-text .word:hover{background:var(--sage-soft);border-radius:4px}
+.s-text .word.word-grouped{background:var(--warm);color:#7a5b1f;border-radius:4px}
 .s-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
 .s-btn{padding:6px 10px;border-radius:9px;background:var(--card-soft);border:1px solid var(--line);color:var(--ink-soft);font-size:.8rem;font-weight:500;display:inline-flex;align-items:center;gap:4px}
 .s-btn:hover{background:var(--bg-alt);color:var(--ink)}
@@ -112,12 +113,22 @@ input:focus,textarea:focus{outline:none}
 
 .hard-block{background:#fdf6e3;border-radius:10px;padding:12px;margin-top:8px;display:none;border-left:3px solid var(--warm-dk)}
 .hard-block.show{display:block}
-.hard-item{margin-bottom:10px;padding-bottom:10px;border-bottom:1px dashed var(--beige)}
+.hard-item{margin-bottom:12px;padding-bottom:12px;border-bottom:1px dashed var(--beige)}
 .hard-item:last-child{margin-bottom:0;padding-bottom:0;border-bottom:none}
-.hard-quote{font-weight:700;color:var(--sage-dk);background:var(--sage-soft);padding:2px 6px;border-radius:4px;display:inline-block;margin-right:6px;font-family:'Inter',sans-serif}
+.hard-head{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.hard-quote{font-weight:700;color:var(--sage-dk);background:var(--sage-soft);padding:2px 6px;border-radius:4px;display:inline-block;font-family:'Inter',sans-serif}
 .hard-type{font-size:.7rem;font-weight:700;color:#a07530;background:#f8e6c4;padding:2px 6px;border-radius:4px;text-transform:uppercase;letter-spacing:.5px}
-.hard-desc{margin-top:6px;color:var(--ink);font-size:.88rem;line-height:1.5}
-.hard-phonetic{font-family:'Inter';color:var(--sage-dk);font-size:.85rem;margin-top:4px}
+.hard-play{flex-shrink:0;width:26px;height:26px;border-radius:50%;background:var(--card);border:1px solid var(--line);display:flex;align-items:center;justify-content:center}
+.hard-play svg{width:11px;height:11px;stroke:var(--ink-soft);fill:var(--ink-soft)}
+.hard-phonetic{font-family:'Inter';color:var(--sage-dk);font-size:.86rem;margin-top:5px}
+.hard-soundslike{margin-top:5px;color:var(--ink);font-size:.88rem;font-family:'Inter','Noto Sans KR',sans-serif}
+.hard-soundslike b{color:var(--ink-soft);font-size:.78rem;margin-right:4px}
+.hard-desc{margin-top:6px;color:var(--ink);font-size:.88rem;line-height:1.55}
+.hard-desc b{color:var(--ink-soft);font-size:.78rem;margin-right:4px}
+.hard-tip{background:var(--sage-soft);border-radius:8px;padding:8px 10px;margin-top:6px;border-left:3px solid var(--sage-dk)}
+.hard-tip b{color:var(--sage-dk);font-size:.78rem}
+.hard-rule{margin-top:6px;color:var(--ink-soft);font-size:.82rem;background:var(--card-soft);padding:6px 10px;border-radius:8px;border-left:3px solid var(--beige-dk);line-height:1.5}
+.hard-rule b{color:#a07530;font-size:.78rem;margin-right:4px}
 
 .side-overlay{position:fixed;inset:0;background:rgba(40,30,20,.4);z-index:200;display:none;backdrop-filter:blur(2px)}
 .side-overlay.show{display:block}
@@ -171,7 +182,7 @@ input:focus,textarea:focus{outline:none}
 .wmodal-close{position:absolute;top:10px;right:10px;width:30px;height:30px;border-radius:50%;background:var(--bg);display:flex;align-items:center;justify-content:center}
 .wmodal-close svg{width:16px;height:16px;stroke:var(--ink);stroke-width:2.4;fill:none}
 .wm-head{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:4px;padding-right:36px}
-.wm-word{font-size:1.5rem;font-weight:700;color:var(--ink);font-family:'Inter'}
+.wm-word{font-size:1.5rem;font-weight:700;color:var(--ink);font-family:'Inter','Noto Sans KR',sans-serif;line-height:1.2}
 .wm-pos{background:var(--sage-soft);color:var(--sage-dk);padding:2px 8px;border-radius:6px;font-size:.72rem;font-weight:700}
 .wm-ipa{font-family:'Inter';color:var(--ink-soft);font-size:.95rem}
 .wm-play{background:var(--sage);color:#fff;border-radius:50%;width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center}
@@ -179,7 +190,7 @@ input:focus,textarea:focus{outline:none}
 .wm-section{margin-top:12px;padding-top:10px;border-top:1px dashed var(--line)}
 .wm-label{font-size:.7rem;font-weight:700;color:var(--ink-mute);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
 .wm-meaning{font-size:.95rem;color:var(--ink);line-height:1.55}
-.wm-morph{font-size:.85rem;color:var(--ink-soft);margin-top:4px}
+.wm-morph{font-size:.85rem;color:var(--ink-soft);margin-top:4px;line-height:1.5}
 .wm-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
 .wm-tag{background:var(--card-soft);border:1px solid var(--line);padding:4px 9px;border-radius:6px;font-size:.82rem;cursor:pointer}
 .wm-tag:hover{background:var(--sage-soft)}
@@ -451,7 +462,7 @@ const STATE = {
   fontSize: 16,
   speed: 1.0,
   gender: 'female',
-  voiceChar: 'natural1',   // natural1 | natural2 | classic
+  voiceChar: 'natural1',
   voiceMode: 'tts',
   voices: [],
   voiceCatalog: { female: [], male: [] },
@@ -505,6 +516,7 @@ function toast(msg, ms=2400){
 function setStatus(msg){ const el=$('#progressText'); if(el && msg) el.textContent=msg; }
 function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function normalizeWord(w){ return String(w||'').toLowerCase().replace(/[^a-z'\-]/g,'').trim(); }
+function normalizePhrase(s){ return String(s||'').toLowerCase().replace(/[^a-z0-9'\-\s]/g,' ').replace(/\s+/g,' ').trim(); }
 function safeJsonParse(txt, fallback){
   if(!txt) return fallback;
   let s=String(txt).trim();
@@ -575,120 +587,45 @@ async function callGeminiDirect(body){
   return res.json();
 }
 
-/* ============================================================
-   TTS Voice Engine - 미국 발음, 남/여 각 3종 캐릭터
-   품질 우선순위 :
-     1) Microsoft Online (Natural) - Edge / Windows
-     2) Apple Enhanced/Premium - Samantha, Alex
-     3) Google US English - Chrome
-     4) 기타 en-US
-   ============================================================ */
-
-/* 각 슬롯별 우선순위 패턴 매칭 */
+/* ---------- TTS Voice Engine ---------- */
 const VOICE_SLOTS = {
   female: [
-    {
-      key: 'natural1',
-      label: 'Aria',
-      desc: 'Natural · 차분',
-      patterns: [
-        /Microsoft Aria Online \(Natural\)/i,
-        /Microsoft Aria/i,
-        /^Aria/i,
-        /Samantha.*\(Premium\)/i,
-        /Samantha.*\(Enhanced\)/i,
-        /Samantha/i,
-        /Google US English/i,
-      ]
-    },
-    {
-      key: 'natural2',
-      label: 'Jenny',
-      desc: 'Natural · 친근',
-      patterns: [
-        /Microsoft Jenny Online \(Natural\)/i,
-        /Microsoft Jenny/i,
-        /^Jenny/i,
-        /Microsoft Michelle Online \(Natural\)/i,
-        /Microsoft Michelle/i,
-        /Ava.*\(Premium\)/i,
-        /Ava.*\(Enhanced\)/i,
-        /^Ava/i,
-        /Allison/i,
-      ]
-    },
-    {
-      key: 'classic',
-      label: 'Samantha',
-      desc: 'Classic · 정통',
-      patterns: [
-        /Samantha.*\(Enhanced\)/i,
-        /Samantha.*\(Premium\)/i,
-        /^Samantha/i,
-        /Microsoft Zira/i,
-        /^Zira/i,
-        /Susan/i,
-        /Karen.*en[-_]US/i,
-        /Vicki/i,
-      ]
-    }
+    {key:'natural1',label:'Aria',desc:'Natural · 차분',patterns:[
+      /Microsoft Aria Online \(Natural\)/i,/Microsoft Aria/i,/^Aria/i,
+      /Samantha.*\(Premium\)/i,/Samantha.*\(Enhanced\)/i,/Samantha/i,/Google US English/i
+    ]},
+    {key:'natural2',label:'Jenny',desc:'Natural · 친근',patterns:[
+      /Microsoft Jenny Online \(Natural\)/i,/Microsoft Jenny/i,/^Jenny/i,
+      /Microsoft Michelle Online \(Natural\)/i,/Microsoft Michelle/i,
+      /Ava.*\(Premium\)/i,/Ava.*\(Enhanced\)/i,/^Ava/i,/Allison/i
+    ]},
+    {key:'classic',label:'Samantha',desc:'Classic · 정통',patterns:[
+      /Samantha.*\(Enhanced\)/i,/Samantha.*\(Premium\)/i,/^Samantha/i,
+      /Microsoft Zira/i,/^Zira/i,/Susan/i,/Karen.*en[-_]US/i,/Vicki/i
+    ]}
   ],
   male: [
-    {
-      key: 'natural1',
-      label: 'Guy',
-      desc: 'Natural · 차분',
-      patterns: [
-        /Microsoft Guy Online \(Natural\)/i,
-        /Microsoft Guy/i,
-        /^Guy/i,
-        /Microsoft Davis Online \(Natural\)/i,
-        /Microsoft Davis/i,
-      ]
-    },
-    {
-      key: 'natural2',
-      label: 'Christopher',
-      desc: 'Natural · 활기',
-      patterns: [
-        /Microsoft Christopher Online \(Natural\)/i,
-        /Microsoft Christopher/i,
-        /^Christopher/i,
-        /Microsoft Eric Online \(Natural\)/i,
-        /Microsoft Eric/i,
-        /Microsoft Roger Online \(Natural\)/i,
-        /Microsoft Roger/i,
-        /Tom.*\(Premium\)/i,
-        /^Tom/i,
-      ]
-    },
-    {
-      key: 'classic',
-      label: 'Alex',
-      desc: 'Classic · 정통',
-      patterns: [
-        /Alex.*\(Enhanced\)/i,
-        /Alex.*\(Premium\)/i,
-        /^Alex$/i,
-        /^Alex /i,
-        /Microsoft David/i,
-        /^David/i,
-        /^Fred/i,
-        /Aaron/i,
-        /Bruce/i,
-      ]
-    }
+    {key:'natural1',label:'Guy',desc:'Natural · 차분',patterns:[
+      /Microsoft Guy Online \(Natural\)/i,/Microsoft Guy/i,/^Guy/i,
+      /Microsoft Davis Online \(Natural\)/i,/Microsoft Davis/i
+    ]},
+    {key:'natural2',label:'Christopher',desc:'Natural · 활기',patterns:[
+      /Microsoft Christopher Online \(Natural\)/i,/Microsoft Christopher/i,/^Christopher/i,
+      /Microsoft Eric Online \(Natural\)/i,/Microsoft Eric/i,
+      /Microsoft Roger Online \(Natural\)/i,/Microsoft Roger/i,
+      /Tom.*\(Premium\)/i,/^Tom/i
+    ]},
+    {key:'classic',label:'Alex',desc:'Classic · 정통',patterns:[
+      /Alex.*\(Enhanced\)/i,/Alex.*\(Premium\)/i,/^Alex$/i,/^Alex /i,
+      /Microsoft David/i,/^David/i,/^Fred/i,/Aaron/i,/Bruce/i
+    ]}
   ]
 };
-
 const UK_BLOCKLIST_RE = /(en[-_]GB)|Daniel|Oliver|Arthur|Kate|Serena|Moira|Hazel|^George|Ryan|Sonia|Libby/i;
 
 function loadVoices(){
   return new Promise(resolve=>{
-    const get=()=>{
-      const v=speechSynthesis.getVoices();
-      if(v && v.length){ STATE.voices=v; resolve(v); }
-    };
+    const get=()=>{ const v=speechSynthesis.getVoices(); if(v && v.length){ STATE.voices=v; resolve(v); } };
     get();
     if(STATE.voices.length===0){
       speechSynthesis.onvoiceschanged=()=>{ get(); buildVoiceCatalog(); renderVoiceCharGroup(); };
@@ -696,10 +633,8 @@ function loadVoices(){
     } else resolve(STATE.voices);
   });
 }
-
 function buildVoiceCatalog(){
   const voices = STATE.voices || speechSynthesis.getVoices() || [];
-  // en-US 후보만 필터
   const usOnly = voices.filter(v=>{
     const lang=(v.lang||'').toLowerCase();
     if(UK_BLOCKLIST_RE.test(v.name||'')) return false;
@@ -708,41 +643,25 @@ function buildVoiceCatalog(){
   for (const gender of ['female','male']) {
     STATE.voiceCatalog[gender] = VOICE_SLOTS[gender].map(slot=>{
       let matched = null;
-      for (const pat of slot.patterns) {
-        matched = usOnly.find(v => pat.test(v.name||''));
-        if (matched) break;
-      }
-      // 추가 폴백: en-US 중 성별 휴리스틱
+      for (const pat of slot.patterns) { matched = usOnly.find(v => pat.test(v.name||'')); if (matched) break; }
       if (!matched) {
-        if (gender === 'male') {
-          matched = usOnly.find(v => /male|guy|david|mark|aaron|tom|eric|roger|christopher|davis|alex|fred/i.test(v.name||''));
-        } else {
-          matched = usOnly.find(v => /female|aria|jenny|zira|samantha|allison|ava|susan|karen|michelle|vicki/i.test(v.name||''));
-        }
+        if (gender === 'male') matched = usOnly.find(v => /male|guy|david|mark|aaron|tom|eric|roger|christopher|davis|alex|fred/i.test(v.name||''));
+        else matched = usOnly.find(v => /female|aria|jenny|zira|samantha|allison|ava|susan|karen|michelle|vicki/i.test(v.name||''));
       }
       if (!matched && usOnly.length) matched = usOnly[0];
       if (!matched) matched = voices.find(v=>(v.lang||'').toLowerCase().startsWith('en')) || voices[0] || null;
-      return {
-        key: slot.key,
-        label: slot.label,
-        desc: slot.desc,
-        voice: matched || null,
-        voiceName: matched ? matched.name : '(미지원)'
-      };
+      return { key:slot.key, label:slot.label, desc:slot.desc, voice: matched||null, voiceName: matched?matched.name:'(미지원)' };
     });
   }
 }
-
 function getActiveVoice(){
   const list = STATE.voiceCatalog[STATE.gender] || [];
   const found = list.find(x=>x.key===STATE.voiceChar);
   if (found && found.voice) return found.voice;
   if (list.length && list[0].voice) return list[0].voice;
-  // 최종 폴백
   const voices = STATE.voices || speechSynthesis.getVoices() || [];
   return voices.find(v=>(v.lang||'').toLowerCase().startsWith('en-us')) || voices[0] || null;
 }
-
 function renderVoiceCharGroup(){
   const wrap = $('#voiceCharGroup'); if (!wrap) return;
   const list = STATE.voiceCatalog[STATE.gender] || [];
@@ -764,7 +683,6 @@ function renderVoiceCharGroup(){
       wrap.querySelectorAll('.voice-chip').forEach(x=>x.classList.toggle('active', x===b));
       stopSpeaking();
       updateVoiceCharNote();
-      // 미리듣기
       speak('Hello, this is your voice preview.');
     });
   });
@@ -777,7 +695,6 @@ function updateVoiceCharNote(){
   if (sel) note.textContent = `현재: ${sel.voiceName || '(미지원)'}`;
   else note.textContent = '';
 }
-
 function stopSpeaking(){
   try{ speechSynthesis.cancel(); }catch(e){}
   if(STATE.currentPlayingBtn){ updatePlayBtnState(STATE.currentPlayingBtn,false); STATE.currentPlayingBtn=null; }
@@ -863,6 +780,58 @@ function updateOriginalModeAvailability(){
   chip.style.pointerEvents=ok?'auto':'none';
 }
 
+/* ---------- Listening coaching prompt (전문 ESL 교수법 기반) ---------- */
+function buildListeningCoachPrompt(sentence){
+  return `You are a professional English listening instructor specializing in teaching Korean learners. Your expertise is grounded in established ESL/EFL methodologies: connected speech analysis (Cauldwell's "Streaming Speech"), Celce-Murcia's pronunciation pedagogy, Gilbert's "Clear Speech" prosody framework, Field's listening pedagogy, and contrastive analysis between Korean and American English phonology.
+
+For the sentence below, identify EVERY feature that makes it hard for Korean learners to HEAR (not just pronounce), and provide concrete listening coaching tips.
+
+Cover ALL relevant phenomena:
+- Linking/liaison (consonant-to-vowel, vowel-to-vowel with /j/ /w/ glides, consonant clusters across word boundaries)
+- Flap T / D (water → "wader", get it → "geddit", a lot of → "alotta")
+- Held / unreleased stops (final t, d, p, k, b, g)
+- Glottal stop replacement (button, mountain, kitten)
+- T-deletion in N+T clusters (interview, twenty, internet, winter)
+- Function word reduction & weak forms (the→/ðə/, to→/tə/, of→/əv/, and→/ən/, for→/fər/, can→/kən/, was→/wəz/, were→/wər/, have→/həv/, has→/həz/, had→/həd/, that→/ðət/, them→/ðəm/, him→/ɪm/, her→/ər/, would→/wəd/, should→/ʃəd/, could→/kəd/)
+- Schwa reduction in unstressed syllables
+- Contractions (gonna, wanna, gotta, hafta, lemme, gimme, kinda, sorta, dunno, I'd've, shoulda, woulda, coulda)
+- Stress-timed rhythm (content vs. function words)
+- Sentence stress & focus (new/contrastive information takes nuclear stress)
+- Intonation patterns (statements, yes/no Q rising, wh-Q falling, lists, contrast, tag questions)
+- Assimilation (don't you→"doncha", did you→"didja", got you→"gotcha", would you→"wouldja", meet you→"meetcha")
+- Elision (next day→"nexday", most people→"mospeople", friendship→"frenship")
+- Intrusive /r/ /j/ /w/ between vowels
+- Silent letters (knee, hour, often, listen, castle, debt, subtle)
+- Vowel reductions Korean learners typically miss (especially before -tion, -ity, -al, -ous endings)
+- Korean-specific interference patterns:
+  * 받침/모음 삽입 (epenthesis): adding 으 after final consonants
+  * L/R distinction (light/right, glass/grass)
+  * F/P, B/V, Z/J confusion
+  * /æ/-/ɛ/-/ʌ/ vowel confusion (bat/bet/but)
+  * Syllable-timed reading habit transferred to listening
+  * Failure to track stressed syllables as anchor points
+
+For each feature found, return STRICT JSON array ONLY:
+[{
+  "quote": "exact phrase from the sentence",
+  "type": "linking|flap|held|glottal|t_deletion|reduction|schwa|contraction|rhythm|stress|intonation|assimilation|elision|intrusion|silent|vowel|korean_interference|idiom",
+  "phonetic": "American IPA or simplified pronunciation guide (use [brackets])",
+  "soundsLike": "어떻게 들리는지 한글 음차 (예: 'get it' → '게딧', 'want to' → '워너')",
+  "whyHard": "한국인 학습자가 왜 이 부분을 놓치는지 1-2문장. 대조 분석(contrastive analysis) 관점에서 한국어 음운 체계와의 차이를 구체적으로 설명",
+  "coachingTip": "이 부분을 잘 듣기 위한 구체적인 청취 훈련법 2-3문장. 전문 교수법에 근거 (shadowing 포인트, 청취 단서, top-down/bottom-up 전략, chunking, 음소 인식 훈련, 예측 전략 중 적합한 것을 명시적으로 활용)",
+  "rule": "관련된 공식 음운/운율 규칙 또는 비공식 패턴의 이름과 한 줄 설명 (예: 'Flap T Rule: 강세 없는 모음 사이의 /t/는 [ɾ]로 약화되어 한국어 ㄹ과 유사하게 들림')"
+}]
+
+Requirements:
+- List EVERY relevant feature in the sentence (do not summarize or skip).
+- "whyHard" must reflect Korean-English contrastive analysis, not generic explanations.
+- "coachingTip" must be ACTIONABLE listening practice advice tied to the specific feature, not just description.
+- "rule" should cite the named phonological/prosodic rule when applicable (Flap T Rule, Linking Rule, Weak Form Rule, Nuclear Stress Rule, Tonic Stress, Thought Group Rule, Anticipatory Coarticulation, etc.).
+- All Korean fields in natural, professional Korean (존댓말, 교수자 톤).
+
+Sentence: "${sentence}"`;
+}
+
 /* ---------- Warmup queue ---------- */
 function startWarmupForDoc(doc){
   stopWarmup();
@@ -894,7 +863,7 @@ function updateWarmupBar(){
   const hardDone=doc.sentences.filter(s=>s.hardListening).length;
   const wordsTotal=new Set(); doc.sentences.forEach(s=>(s.words||[]).forEach(w=>{const n=normalizeWord(w); if(n) wordsTotal.add(n);}));
   const wordsDone=Object.keys(doc.wordData||{}).length;
-  tx.textContent=`준비 중 · 듣기 ${hardDone}/${total} · 단어 ${wordsDone}/${wordsTotal.size}`;
+  tx.textContent=`준비 중 · 리스닝 ${hardDone}/${total} · 단어 ${wordsDone}/${wordsTotal.size}`;
   bar.classList.add('active');
 }
 async function processWarmup(){
@@ -908,7 +877,6 @@ async function processWarmup(){
   if(STATE.userActionActive || STATE.warmupPaused){
     setTimeout(processWarmup,1500); return;
   }
-  // 가시 영역의 문장(hard) → 가시 영역의 단어 → 그 외 순으로 우선
   let idx = STATE.warmupQueue.findIndex(it=>it.type==='hard' && STATE.visibleSentences.has(it.sid));
   if(idx<0){
     const visibleWords = collectVisibleWords();
@@ -935,8 +903,8 @@ function collectVisibleWords(){
 async function fetchHardListening(sid){
   const doc=STATE.currentDoc; if(!doc) return;
   const s=doc.sentences.find(x=>x.id===sid); if(!s || s.hardListening) return;
-  const prompt=`You are an American English pronunciation coach. For the sentence below, identify EVERY phonetic feature that makes it hard to hear for Korean learners. Cover ALL of: silent letters, liaison/linking, contractions, function-word reduction (the, a, of, to, for, that, and, but, can, was, were, have, has, had, am, are, is, will, would, should...), stress shift, weak forms, schwa reduction, intrusive sounds, flap T, dropped T/D, idiomatic phrases. Quote the EXACT word or phrase from the sentence.\n\nReturn JSON array ONLY:\n[{"quote":"exact phrase from sentence","type":"silent|liaison|contraction|reduction|stress|weak|schwa|flap|drop|idiom|rhythm|intonation","phonetic":"IPA or simplified [American]","desc":"Korean explanation, 1-2 sentences, very specific"}]\n\nList every relevant feature. Do not skip any.\n\nSentence: "${s.text}"`;
-  const body={contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{temperature:0.3,maxOutputTokens:2048,responseMimeType:'application/json'}};
+  const prompt=buildListeningCoachPrompt(s.text);
+  const body={contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{temperature:0.3,maxOutputTokens:3072,responseMimeType:'application/json'}};
   const res=await callGemini(body,{priority:2});
   const txt=res?.candidates?.[0]?.content?.parts?.[0]?.text||'[]';
   const arr=safeJsonParse(txt,[]);
@@ -950,7 +918,6 @@ async function fetchWordBatch(words){
   doc.wordData=doc.wordData||{};
   const need = words.filter(w=>!doc.wordData[w] && !STATE.wordMemCache.has(w));
   if(need.length===0) return;
-  // IDB 1차
   const stillNeed=[];
   for(const w of need){
     try{
@@ -1059,7 +1026,7 @@ function splitSentences(t){
   return r.map(s=>s.trim()).filter(s=>s.length>2);
 }
 
-/* ---------- analyzeText (문장 단위 즉시 저장) ---------- */
+/* ---------- analyzeText ---------- */
 async function analyzeText(text, meta={}){
   stopWarmup();
   STATE.sentences=[]; STATE.analyzing=true; STATE.currentFullText=text;
@@ -1119,13 +1086,13 @@ async function runAnalysisLoop(doc, sentences, startIdx){
           translationLiteral:s.translationLiteral||'',
           translationNatural:s.translationNatural||'',
           words:Array.isArray(s.words)?s.words:[],
+          phrases:Array.isArray(s.phrases)?s.phrases:[],
           hardListening:null
         };
         STATE.sentences.push(obj);
         doc.sentences.push(obj);
         doc.lastCompletedIndex = i+idx;
         renderSentenceBlock(obj);
-        // 문장 1개마다 즉시 저장
         await dbPut('documents',doc).catch(()=>{});
       }
       done+=chunk.length;
@@ -1136,7 +1103,6 @@ async function runAnalysisLoop(doc, sentences, startIdx){
       await dbPut('documents',doc).catch(()=>{});
     }
   }
-  // 완료 처리
   if (doc.lastCompletedIndex >= total-1) {
     doc.analysisStatus = 'completed';
     doc.pendingSentences = [];
@@ -1151,15 +1117,44 @@ async function runAnalysisLoop(doc, sentences, startIdx){
 }
 
 async function analyzeChunk(sentences){
-  const prompt=`You are an American English to Korean translator. For each sentence below, ALWAYS provide BOTH a literal Korean translation AND a natural Korean translation. NEVER leave either translation empty.\n\nReturn EXACTLY this JSON array (no other text):\n[{"text":"original English sentence","translationLiteral":"직역 Korean","translationNatural":"의역 Korean","words":["meaningful","content","words"]}]\n\nRules:\n- translationLiteral: word-for-word literal Korean\n- translationNatural: natural fluent Korean\n- words: 3-8 meaningful content words from the sentence (no articles/be-verbs)\n- Both translations are MANDATORY. Never return empty strings.\n\nSentences:\n${sentences.map((s,i)=>`${i+1}. ${s}`).join('\n')}`;
-  const body={contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{temperature:0.4,maxOutputTokens:4096,responseMimeType:'application/json'}};
+  const prompt=`You are an American English to Korean translator and linguistic analyst. For each sentence below, ALWAYS provide BOTH a literal Korean translation AND a natural Korean translation. NEVER leave either translation empty.
+
+Return EXACTLY this JSON array (no other text):
+[{
+  "text":"original English sentence",
+  "translationLiteral":"직역 Korean",
+  "translationNatural":"의역 Korean",
+  "words":["meaningful","content","words"],
+  "phrases":[
+    {"text":"exact multi-word expression as it appears in the sentence","type":"phrasal_verb|idiom|collocation|compound_noun|proper_noun|fixed_expression","meaningKo":"한국어 의미"}
+  ]
+}]
+
+Rules:
+- translationLiteral: word-for-word literal Korean
+- translationNatural: natural fluent Korean
+- words: 3-8 meaningful content words (no articles/be-verbs)
+- phrases: identify EVERY multi-word unit that functions as ONE meaning unit. Include:
+  * phrasal verbs (give up, look forward to, run into, put off, come up with)
+  * idioms (piece of cake, break the ice, on the other hand, in a nutshell)
+  * fixed collocations (make a decision, take a shower, heavy rain, strong coffee)
+  * compound nouns (high school, ice cream, post office, swimming pool)
+  * proper nouns (New York, United States, Steve Jobs, World War II)
+  * fixed expressions / discourse markers (as well as, in spite of, by the way, in order to, such as)
+- "text" in phrases MUST match the sentence EXACTLY (same casing, same word order, contiguous words only, including hyphenation/punctuation).
+- If no multi-word units exist, return phrases: [].
+- Both translations are MANDATORY. Never return empty strings.
+
+Sentences:
+${sentences.map((s,i)=>`${i+1}. ${s}`).join('\n')}`;
+  const body={contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{temperature:0.4,maxOutputTokens:6144,responseMimeType:'application/json'}};
   const result=await callGemini(body,{priority:1});
   const txt=result?.candidates?.[0]?.content?.parts?.[0]?.text||'[]';
   let parsed=safeJsonParse(txt,[]);
   if(!Array.isArray(parsed)) parsed=[];
   while(parsed.length<sentences.length){
     const s=sentences[parsed.length];
-    parsed.push({text:s,translationLiteral:'',translationNatural:'',words:s.split(/\s+/).filter(w=>w.length>2).slice(0,6)});
+    parsed.push({text:s,translationLiteral:'',translationNatural:'',words:s.split(/\s+/).filter(w=>w.length>2).slice(0,6),phrases:[]});
   }
   for(let i=0;i<parsed.length;i++){
     if(!parsed[i].text) parsed[i].text=sentences[i];
@@ -1173,6 +1168,7 @@ async function analyzeChunk(sentences){
     if(!Array.isArray(parsed[i].words) || parsed[i].words.length===0){
       parsed[i].words=parsed[i].text.split(/\s+/).filter(w=>w.length>2).slice(0,6);
     }
+    if(!Array.isArray(parsed[i].phrases)) parsed[i].phrases=[];
   }
   return parsed.slice(0,sentences.length);
 }
@@ -1189,10 +1185,8 @@ async function resumeAnalysis(docId){
   if(STATE.resumingDocs.has(docId)){ toast('이미 이어 분석 진행 중입니다'); return; }
   const doc=await dbGet('documents',docId);
   if(!doc){ toast('문서를 찾을 수 없습니다'); return; }
-  // 원본 텍스트 복구
   let sourceText = doc.sourceText || doc.fullText;
   if (!sourceText) {
-    // 파일에서 재추출
     const rec = await dbGet('files', docId);
     if (rec && rec.blob) {
       try{
@@ -1256,12 +1250,12 @@ function renderSentenceBlock(s){
   card.innerHTML=`
     <div class="sentence-head">
       <div class="s-num">${s.number}</div>
-      <div class="s-text">${renderClickableWords(s.text)}</div>
+      <div class="s-text">${renderClickableWords(s.text, s.id)}</div>
     </div>
     <div class="s-actions">
       <button class="s-btn play-btn" data-act="play">${playIconSvg()}<span>재생</span></button>
       <button class="s-btn" data-act="tr">번역</button>
-      <button class="s-btn" data-act="hard">왜 안들리지?</button>
+      <button class="s-btn" data-act="hard">리스닝</button>
       <button class="s-btn" data-act="follow">따라읽기</button>
     </div>
     <div class="translation-block" data-tr-for="${s.id}"></div>
@@ -1273,8 +1267,23 @@ function renderSentenceBlock(s){
   card.querySelector('[data-act="hard"]').addEventListener('click',()=>handleHardToggle(s,card));
   card.querySelector('[data-act="follow"]').addEventListener('click',()=>handleFollowRead(s,card));
   card.querySelectorAll('.s-text .word').forEach(el=>{
-    el.addEventListener('click',e=>{ e.stopPropagation(); const w=el.dataset.w; if(w) openWordModal(w); });
-    // 프리페치 (호버/터치 시작)
+    el.addEventListener('click', e=>{
+      e.stopPropagation();
+      const pos = Number(el.dataset.pos);
+      const single = el.dataset.w;
+      const hit = findPhraseAtPosition(s.text, s.phrases, pos);
+      if(hit){
+        const allWords = card.querySelectorAll('.s-text .word');
+        allWords.forEach(w=>{
+          const p = Number(w.dataset.pos);
+          if(p>=hit.start && p<=hit.end) w.classList.add('word-grouped');
+        });
+        setTimeout(()=>{ allWords.forEach(w=>w.classList.remove('word-grouped')); }, 1500);
+        openPhraseModal(hit.joinedText, hit.joinedNorm, hit.phrase);
+      } else {
+        if(single) openWordModal(single);
+      }
+    });
     const prefetch = ()=>{ const w=el.dataset.w; if(w) prefetchWord(w); };
     el.addEventListener('pointerenter', prefetch, {passive:true});
     el.addEventListener('touchstart', prefetch, {passive:true});
@@ -1283,16 +1292,63 @@ function renderSentenceBlock(s){
   if(STATE.observer) STATE.observer.observe(card);
 }
 function playIconSvg(){ return `<svg viewBox="0 0 24 24" class="play-ic"><polygon points="6 4 20 12 6 20 6 4"/></svg>`; }
-function renderClickableWords(text){
+function renderClickableWords(text, sid){
   if(!text) return '';
   const parts=String(text).split(/(\s+)/);
+  let wordPos=0;
   return parts.map(p=>{
     if(/^\s+$/.test(p)) return p;
     const norm=normalizeWord(p);
     if(!norm) return escapeHtml(p);
-    return `<span class="word" data-w="${escapeHtml(norm)}">${escapeHtml(p)}</span>`;
+    const pos = wordPos++;
+    return `<span class="word" data-w="${escapeHtml(norm)}" data-pos="${pos}" data-sid="${escapeHtml(sid||'')}">${escapeHtml(p)}</span>`;
   }).join('');
 }
+
+/* ---------- Phrase detection (다단어 묶음 탐지) ---------- */
+function tokenizeSentence(sentence){
+  const tokens=[];
+  const parts=String(sentence||'').split(/(\s+)/);
+  let pos=0;
+  for(const p of parts){
+    if(/^\s+$/.test(p) || p==='') continue;
+    tokens.push({ raw:p, norm:normalizeWord(p), pos:pos++ });
+  }
+  return tokens;
+}
+function findPhraseAtPosition(sentence, phrases, clickedPos){
+  if(!Array.isArray(phrases) || phrases.length===0) return null;
+  const tokens = tokenizeSentence(sentence);
+  const sorted = phrases.slice().sort((a,b)=>{
+    const al=(a.text||'').split(/\s+/).length;
+    const bl=(b.text||'').split(/\s+/).length;
+    return bl-al;
+  });
+  for(const ph of sorted){
+    const phTokens = String(ph.text||'').trim().split(/\s+/).map(normalizeWord).filter(Boolean);
+    if(phTokens.length<2) continue;
+    for(let i=0;i<=tokens.length-phTokens.length;i++){
+      let match=true;
+      for(let j=0;j<phTokens.length;j++){
+        if(tokens[i+j].norm !== phTokens[j]){ match=false; break; }
+      }
+      if(match){
+        const start=tokens[i].pos;
+        const end=tokens[i+phTokens.length-1].pos;
+        if(clickedPos>=start && clickedPos<=end){
+          return {
+            phrase: ph,
+            start, end,
+            joinedText: tokens.slice(i, i+phTokens.length).map(t=>t.raw).join(' '),
+            joinedNorm: phTokens.join(' ')
+          };
+        }
+      }
+    }
+  }
+  return null;
+}
+
 async function handlePlayToggle(s, btn){
   if(STATE.currentPlayingBtn===btn){ stopSpeaking(); return; }
   stopSpeaking();
@@ -1363,11 +1419,11 @@ async function handleHardToggle(s, card){
     renderHardListeningInto(block, s.hardListening);
     return;
   }
-  block.innerHTML=`<div class="wm-loading"><div class="wm-spinner"></div>발음 분석 중...</div>`;
+  block.innerHTML=`<div class="wm-loading"><div class="wm-spinner"></div>리스닝 코칭 분석 중...</div>`;
   STATE.userActionActive=true;
   try{
-    const prompt=`You are an American English pronunciation coach for Korean learners. For the sentence below, identify EVERY phonetic feature that makes it hard to hear. Cover ALL of: silent letters, liaison/linking, contractions, function-word reduction, stress shift, weak forms, schwa reduction, intrusive sounds, flap T, dropped T/D, idiomatic phrases.\n\nReturn JSON array ONLY:\n[{"quote":"exact phrase","type":"silent|liaison|contraction|reduction|stress|weak|schwa|flap|drop|idiom|rhythm|intonation","phonetic":"American IPA","desc":"한국어 설명"}]\n\nSentence: "${s.text}"`;
-    const body={contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{temperature:0.3,maxOutputTokens:2048,responseMimeType:'application/json'}};
+    const prompt=buildListeningCoachPrompt(s.text);
+    const body={contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{temperature:0.3,maxOutputTokens:3072,responseMimeType:'application/json'}};
     const res=await callGeminiDirect(body);
     const txt=res?.candidates?.[0]?.content?.parts?.[0]?.text||'[]';
     const arr=safeJsonParse(txt,[]);
@@ -1382,14 +1438,27 @@ async function handleHardToggle(s, card){
 }
 function renderHardListeningInto(block, items){
   if(!items || items.length===0){ block.innerHTML='<div class="wm-loading">특이 발음 사항이 없습니다.</div>'; return; }
-  block.innerHTML=items.map(it=>`
+  block.innerHTML=items.map((it,i)=>`
     <div class="hard-item">
-      <span class="hard-quote">${escapeHtml(it.quote||'')}</span>
-      <span class="hard-type">${escapeHtml(it.type||'')}</span>
+      <div class="hard-head">
+        <span class="hard-quote">${escapeHtml(it.quote||'')}</span>
+        <span class="hard-type">${escapeHtml(it.type||'')}</span>
+        <button class="hard-play" data-i="${i}" title="듣기"><svg viewBox="0 0 24 24"><polygon points="6 4 20 12 6 20 6 4"/></svg></button>
+      </div>
       ${it.phonetic?`<div class="hard-phonetic">${escapeHtml(it.phonetic)}</div>`:''}
-      <div class="hard-desc">${escapeHtml(it.desc||'')}</div>
+      ${it.soundsLike?`<div class="hard-soundslike"><b>들리는 소리</b>${escapeHtml(it.soundsLike)}</div>`:''}
+      ${it.whyHard?`<div class="hard-desc"><b>한국인이 놓치는 이유</b>${escapeHtml(it.whyHard)}</div>`:''}
+      ${it.coachingTip?`<div class="hard-tip"><b>🎯 코칭 팁</b>${escapeHtml(it.coachingTip)}</div>`:''}
+      ${it.rule?`<div class="hard-rule"><b>📘 규칙</b>${escapeHtml(it.rule)}</div>`:''}
     </div>
   `).join('');
+  block.querySelectorAll('.hard-play').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const idx=Number(btn.dataset.i);
+      const q=items[idx]?.quote;
+      if(q) speak(q,{btn});
+    });
+  });
 }
 async function handleFollowRead(s, card){
   const block=card.querySelector(`[data-follow-for="${s.id}"]`);
@@ -1429,8 +1498,14 @@ function calcSimilarity(a,b){
   return m/Math.max(A.length,B.length);
 }
 
-/* ---------- Word modal: 즉시 표시 ---------- */
-const POS_KR={noun:'명사',verb:'동사',adj:'형용사',adv:'부사',prep:'전치사',conj:'접속사',pron:'대명사',det:'관형사',interj:'감탄사'};
+/* ---------- Word modal ---------- */
+const POS_KR={
+  noun:'명사', verb:'동사', adj:'형용사', adv:'부사', prep:'전치사',
+  conj:'접속사', pron:'대명사', det:'관형사', interj:'감탄사',
+  phrasal_verb:'구동사', idiom:'관용구', collocation:'연어',
+  compound_noun:'복합명사', proper_noun:'고유명사', fixed_expression:'고정표현',
+  phrase:'표현'
+};
 
 function prefetchWord(word){
   const w = normalizeWord(word); if (!w) return;
@@ -1454,14 +1529,9 @@ function prefetchWord(word){
 function openWordModal(word){
   word=normalizeWord(word); if(!word) return;
   STATE.userActionActive=true;
-  // 셸을 0프레임에 표시
   const modal=createWordModal(word);
-  // 메모리 캐시 즉시 확인
   const memHit = STATE.wordMemCache.get(word) || (STATE.currentDoc && STATE.currentDoc.wordData && STATE.currentDoc.wordData[word]);
-  if(memHit){
-    renderWordModalContent(modal, memHit);
-    return;
-  }
+  if(memHit){ renderWordModalContent(modal, memHit); return; }
   modal.querySelector('.wm-body').innerHTML=`
     <div class="wm-head"><span class="wm-word">${escapeHtml(word)}</span></div>
     <div class="wm-loading"><div class="wm-spinner"></div>정보를 불러오는 중...</div>
@@ -1490,6 +1560,63 @@ async function fetchAndRenderWord(word, modal){
     renderWordModalContent(modal,data);
   }catch(e){ modal.querySelector('.wm-body').innerHTML=`<div class="wm-loading">불러오기 실패: ${escapeHtml(e.message)}</div>`; }
 }
+
+/* ---------- Phrase modal (다단어 표현 단어창) ---------- */
+function openPhraseModal(displayText, normKey, phraseHint){
+  STATE.userActionActive=true;
+  const modal=createWordModal(displayText);
+  const cacheKey = 'phrase::'+normKey;
+  const memHit = STATE.wordMemCache.get(cacheKey);
+  if(memHit){ renderWordModalContent(modal, memHit); return; }
+  modal.querySelector('.wm-body').innerHTML=`
+    <div class="wm-head">
+      <span class="wm-word">${escapeHtml(displayText)}</span>
+      <span class="wm-pos">${escapeHtml(POS_KR[phraseHint?.type]||'표현')}</span>
+    </div>
+    <div class="wm-loading"><div class="wm-spinner"></div>표현 정보를 불러오는 중...</div>
+  `;
+  fetchAndRenderPhrase(displayText, normKey, phraseHint, modal);
+}
+async function fetchAndRenderPhrase(displayText, normKey, phraseHint, modal){
+  const cacheKey = 'phrase::'+normKey;
+  try{
+    const c=await dbGet('words', cacheKey);
+    if(c && c.data){
+      STATE.wordMemCache.set(cacheKey, c.data);
+      renderWordModalContent(modal, c.data);
+      return;
+    }
+  }catch(e){}
+  try{
+    const typeHint = phraseHint?.type ? `Type hint: ${phraseHint.type}.` : '';
+    const meaningHint = phraseHint?.meaningKo ? `Known Korean meaning: ${phraseHint.meaningKo}.` : '';
+    const prompt=`Return detailed info for the English multi-word expression "${displayText}" in American English. ${typeHint} ${meaningHint}
+Treat it as ONE meaning unit (do not break it into separate words).
+JSON only:
+{
+  "word":"${displayText}",
+  "pos":"phrasal_verb|idiom|collocation|compound_noun|proper_noun|fixed_expression",
+  "ipa":"American IPA for the whole phrase, reflecting connected speech (linking, reduction, stress pattern)",
+  "meaningKo":"Korean meaning of the whole phrase as a unit",
+  "morphKo":"구성 요소 분석 - 각 구성어가 어떻게 결합하여 전체 의미를 만드는지 한국어로 설명. 직역과 실제 의미의 차이도 언급",
+  "synonyms":["alternative phrases or single-word equivalents"],
+  "antonyms":["opposite phrases if applicable"],
+  "examples":[
+    {"en":"natural example using the whole phrase","ko":"한국어 번역"},
+    {"en":"another natural example","ko":"한국어 번역"}
+  ]
+}`;
+    const body={contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{temperature:0.3,maxOutputTokens:1536,responseMimeType:'application/json'}};
+    const res=await callGeminiDirect(body);
+    const txt=res?.candidates?.[0]?.content?.parts?.[0]?.text||'{}';
+    const data=safeJsonParse(txt,{});
+    if(!data || !data.word) data.word=displayText;
+    STATE.wordMemCache.set(cacheKey, data);
+    try{ await dbPut('words',{word:cacheKey,data,ts:Date.now()}); }catch(e){}
+    renderWordModalContent(modal, data);
+  }catch(e){ modal.querySelector('.wm-body').innerHTML=`<div class="wm-loading">불러오기 실패: ${escapeHtml(e.message)}</div>`; }
+}
+
 function createWordModal(word){
   ensureWmOverlay();
   const stack=$('#wmStack'); stack.classList.add('show');
@@ -1955,7 +2082,6 @@ function bindUI(){
     }
   });
 
-  // 비정상 종료 마커
   window.addEventListener('pagehide', ()=>{
     if (STATE.currentDoc && STATE.analyzing) {
       try{
@@ -1989,9 +2115,11 @@ async function init(){
   const sp=Number(localStorage.getItem('ts_speed'))||1.0;
   STATE.speed=sp;
 
+
   $$('#speedGroup .opt-chip').forEach(b=>b.classList.toggle('active', Number(b.dataset.speed)===sp));
   const gd=localStorage.getItem('ts_gender')||'female';
   STATE.gender=gd;
+
 
   $$('#genderGroup .opt-chip').forEach(b=>b.classList.toggle('active', b.dataset.gender===gd));
   const vc=localStorage.getItem('ts_voiceChar')||'natural1';
@@ -2006,10 +2134,8 @@ async function init(){
   buildVoiceCatalog();
   renderVoiceCharGroup();
 
-  // 단어 캐시를 메모리에 프리로드 → 단어장 즉시 표시
   await preloadWordCache();
 
-  // 음성 워밍업
   try{ const u=new SpeechSynthesisUtterance(' '); u.volume=0; speechSynthesis.speak(u); }catch(e){}
 
   await refreshDocList();

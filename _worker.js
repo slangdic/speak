@@ -7,7 +7,12 @@
    Env vars: GEMINI_API_KEY_1, GEMINI_API_KEY_2, ...
    ============================================================ */
 
-const MODEL = 'gemini-2.5-flash';
+const DEFAULT_MODEL = 'gemini-2.5-flash';
+const ALLOWED_MODELS = new Set([
+  'gemini-2.5-flash',
+  'gemini-2.5-flash-lite',
+  'gemini-2.0-flash'
+]);
 const API_BASE = 'https://generativelanguage.googleapis.com/v1beta';
 
 let keyCursor = 0;
@@ -39,12 +44,22 @@ export default {
   }
 };
 
+/* ---------- 모델 선택 헬퍼 ---------- */
+function resolveModel(request, body) {
+  // 우선순위: 헤더 > body.model > 기본값
+  const fromHeader = request.headers.get('X-Gemini-Model');
+  const fromBody = body && body.model;
+  const candidate = (fromHeader || fromBody || DEFAULT_MODEL).trim();
+  return ALLOWED_MODELS.has(candidate) ? candidate : DEFAULT_MODEL;
+}
+
 /* ---------- /api/health ---------- */
 function handleHealth(env) {
   const keys = collectKeys(env);
   return withCORS(new Response(JSON.stringify({
     ok: true,
-    model: MODEL,
+    defaultModel: DEFAULT_MODEL,
+    allowedModels: Array.from(ALLOWED_MODELS),
     keyCount: keys.length,
     timestamp: new Date().toISOString()
   }), { headers: { 'Content-Type': 'application/json' } }));
@@ -62,6 +77,9 @@ async function handleGemini(request, env) {
   if (!body.contents) {
     return jsonError(400, 'Missing "contents" field');
   }
+  
+  const model = resolveModel(request, body);
+  delete body.model;
   
   const keys = collectKeys(env);
   if (keys.length === 0) {
@@ -83,12 +101,15 @@ async function handleGemini(request, env) {
   
   const endpoint = stream ? 'streamGenerateContent' : 'generateContent';
   
+  let lastStatus = 0;
+  let lastBody = '';
+  
   // 2라운드 재시도
   for (let round = 0; round < 2; round++) {
     for (let i = 0; i < keys.length; i++) {
       const idx = (keyCursor + i) % keys.length;
       const key = keys[idx];
-      const apiUrl = `${API_BASE}/models/${MODEL}:${endpoint}?key=${key.value}`;
+      const apiUrl = `${API_BASE}/models/${model}:${endpoint}?key=${key.value}`;
       
       try {
         const upstream = await fetch(apiUrl, {
@@ -98,6 +119,8 @@ async function handleGemini(request, env) {
         });
         
         if (upstream.status === 429 || (upstream.status >= 500 && upstream.status < 600)) {
+          lastStatus = upstream.status;
+          try { lastBody = (await upstream.text()).slice(0, 300); } catch {}
           continue;
         }
         
@@ -109,7 +132,8 @@ async function handleGemini(request, env) {
             headers: {
               ...corsHeaders(),
               'Content-Type': 'text/event-stream',
-              'X-Used-Key-Index': String(key.index)
+              'X-Used-Key-Index': String(key.index),
+              'X-Used-Model': model
             }
           });
         }
@@ -120,23 +144,28 @@ async function handleGemini(request, env) {
           headers: {
             ...corsHeaders(),
             'Content-Type': 'application/json',
-            'X-Used-Key-Index': String(key.index)
+            'X-Used-Key-Index': String(key.index),
+            'X-Used-Model': model
           }
         });
       } catch (err) {
+        lastStatus = 0;
+        lastBody = err.message || '';
         continue;
       }
     }
     if (round === 0) await sleep(30000);
   }
   
-  return jsonError(503, 'All Gemini keys exhausted (429/5xx)');
+  return jsonError(503, `All Gemini keys exhausted (model=${model}, lastStatus=${lastStatus}, detail=${lastBody.slice(0,200)})`);
 }
 
 /* ---------- /api/youtube ---------- */
 async function handleYouTube(request, env, url) {
   const ytUrlRaw = url.searchParams.get('url');
   const debug = url.searchParams.get('debug') === '1';
+  const modelParam = url.searchParams.get('model') || request.headers.get('X-Gemini-Model') || DEFAULT_MODEL;
+  const model = ALLOWED_MODELS.has(modelParam) ? modelParam : DEFAULT_MODEL;
   if (!ytUrlRaw) return jsonError(400, 'Missing url parameter');
   
   // Shorts/embed/live URL 정규화
@@ -183,7 +212,7 @@ async function handleYouTube(request, env, url) {
   }
   
   try {
-    const transcript = await transcribeWithGemini(normalizedUrl, keys);
+    const transcript = await transcribeWithGemini(normalizedUrl, keys, model);
     return withCORS(new Response(JSON.stringify({
       source: 'gemini',
       videoId,
@@ -402,7 +431,8 @@ function decodeEntities(s) {
 }
 
 /* ---------- Gemini 전사 ---------- */
-async function transcribeWithGemini(videoUrl, keys) {
+async function transcribeWithGemini(videoUrl, keys, model = DEFAULT_MODEL) {
+  const useModel = ALLOWED_MODELS.has(model) ? model : DEFAULT_MODEL;
   const payload = {
     contents: [{
       role: 'user',
@@ -418,7 +448,7 @@ async function transcribeWithGemini(videoUrl, keys) {
     for (let i = 0; i < keys.length; i++) {
       const idx = (keyCursor + i) % keys.length;
       const key = keys[idx];
-      const apiUrl = `${API_BASE}/models/${MODEL}:generateContent?key=${key.value}`;
+      const apiUrl = `${API_BASE}/models/${useModel}:generateContent?key=${key.value}`;
       try {
         const res = await fetch(apiUrl, {
           method: 'POST',
@@ -440,7 +470,7 @@ async function transcribeWithGemini(videoUrl, keys) {
     }
     if (round === 0) await sleep(30000);
   }
-  throw new Error(`All keys exhausted (${keys.length} keys, 2 rounds)`);
+  throw new Error(`All keys exhausted (${keys.length} keys, 2 rounds, model=${useModel})`);
 }
 
 /* ---------- Util ---------- */
@@ -462,7 +492,7 @@ function corsHeaders() {
   return {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Gemini-Model',
     'Access-Control-Max-Age': '86400'
   };
 }

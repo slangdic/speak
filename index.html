@@ -424,6 +424,12 @@ input:focus,textarea:focus{outline:none}
       <input id="genTopic" type="text" placeholder="예: daily life, school trip">
       <button id="genMicBtn" aria-label="음성"><svg viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg></button>
       <button id="genClearBtn" aria-label="삭제"><svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button>
+      <button id="genFileBtn" aria-label="파일업로드" title="파일로 주제 입력"><svg viewBox="0 0 24 24"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg></button>
+      <input id="genFileInput" type="file" accept=".txt,.pdf,.docx,.doc,image/*" style="display:none">
+    </div>
+    <div id="genFileStatus" style="display:none;font-size:.78rem;color:var(--ink-mute);margin-top:4px;padding:6px 10px;background:var(--card-soft);border-radius:8px;align-items:center;gap:6px">
+      <span id="genFileStatusText"></span>
+      <button id="genFileRemoveBtn" style="margin-left:auto;background:none;border:none;cursor:pointer;color:var(--ink-mute);padding:0;font-size:.9rem">✕</button>
     </div>
 
     <div class="gen-label">단어 수</div>
@@ -527,6 +533,8 @@ const STATE = {
   genStyle: 'Casual',
   genFormat: 'Essay',
   genWords: 1000,
+  genRefText: '',
+  genRefFileName: '',
   recognizer: null,
   wordMemCache: new Map(),
   wordPrefetchPending: new Set(),
@@ -2250,7 +2258,12 @@ function closeSidePanel(){ $('#sidePanel').classList.remove('show'); $('#sideOve
 
 /* ---------- Generate modal ---------- */
 function openGenModal(){ buildGradeStrip(); buildScrubber(); $('#genOverlay').classList.add('show'); }
-function closeGenModal(){ $('#genOverlay').classList.remove('show'); stopGenRecognizer(); }
+function closeGenModal(){ $('#genOverlay').classList.remove('show'); stopGenRecognizer(); resetGenFile(); }
+function resetGenFile(){
+  STATE.genRefText=''; STATE.genRefFileName='';
+  const s=$('#genFileStatus'); if(s) s.style.display='none';
+  const inp=$('#genFileInput'); if(inp) inp.value='';
+}
 function buildGradeStrip(){
   const strip=$('#gradeStrip'); if(!strip) return;
   const grades=['K','1','2','3','4','5','6','7','8','9','10','11','12'];
@@ -2295,20 +2308,29 @@ function updateScrubberDisplay(){
 }
 async function handleGenerate(){
   const topic=$('#genTopic').value.trim();
-  if(!topic){ toast('주제를 입력하세요'); return; }
+  const hasRefFile = STATE.genRefText && STATE.genRefText.length > 0;
+  if(!topic && !hasRefFile){ toast('주제를 입력하거나 파일을 업로드하세요'); return; }
   const grade=STATE.genGrade, style=STATE.genStyle, fmt=STATE.genFormat, words=STATE.genWords;
   closeGenModal();
   markUserAction(20000);
   showProgress(20,'문장 생성 중...');
   try{
     const gradeDesc=getGradeDesc(grade);
-    const prompt=`Generate a ${fmt.toLowerCase()} in American English about "${topic}".\n\nTarget reader: US grade ${grade} (${gradeDesc}).\nStyle: ${style}.\nLength: about ${words} words (±10%).\n\nRequirements:\n- Use natural American English vocabulary and idioms.\n- Match difficulty to grade ${grade}.\n- NO slang, NO profanity.\n- Clear, well-formed sentences.\n\nReturn the text ONLY.`;
+    let prompt;
+    if(hasRefFile){
+      const topicPart = topic ? `The topic hint is: "${topic}".\n` : '';
+      const excerpt = STATE.genRefText.slice(0,4000);
+      prompt=`You are given a reference text. Generate a ${fmt.toLowerCase()} in American English based on the content and theme of the reference text below.\n${topicPart}\nTarget reader: US grade ${grade} (${gradeDesc}).\nStyle: ${style}.\nLength: about ${words} words (±10%).\n\nRequirements:\n- Derive the topic and key ideas from the reference text.\n- Use natural American English vocabulary and idioms.\n- Match difficulty to grade ${grade}.\n- NO slang, NO profanity.\n- Clear, well-formed sentences.\n- Do NOT copy sentences from the reference directly.\n\nREFERENCE TEXT:\n"""\n${excerpt}\n"""\n\nReturn the generated text ONLY.`;
+    } else {
+      prompt=`Generate a ${fmt.toLowerCase()} in American English about "${topic}".\n\nTarget reader: US grade ${grade} (${gradeDesc}).\nStyle: ${style}.\nLength: about ${words} words (±10%).\n\nRequirements:\n- Use natural American English vocabulary and idioms.\n- Match difficulty to grade ${grade}.\n- NO slang, NO profanity.\n- Clear, well-formed sentences.\n\nReturn the text ONLY.`;
+    }
     const body={contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{temperature:0.7,maxOutputTokens:8192}};
     const res=await callGeminiDirect(body);
     const text=(res?.candidates?.[0]?.content?.parts?.[0]?.text||'').trim();
     if(!text) throw new Error('생성된 텍스트가 비어있음');
     STATE.currentRawFile=null;
-    await analyzeText(text,{sourceType:'generated',title:titleFromText(topic)+` (G${grade})`});
+    const titleBase = topic || (STATE.genRefFileName||'파일 기반');
+    await analyzeText(text,{sourceType:'generated',title:titleFromText(titleBase)+` (G${grade})`});
   }catch(e){ hideProgress(); toast('생성 실패: '+e.message); }
   finally{ clearUserAction(); }
 }
@@ -2410,7 +2432,39 @@ function bindUI(){
   $('#genMicBtn')?.addEventListener('click',()=>{ if(STATE.recognizer) stopGenRecognizer(); else startGenRecognizer(); });
   $('#scrubLeft')?.addEventListener('click',()=>stepScrub(-1));
   $('#scrubRight')?.addEventListener('click',()=>stepScrub(1));
-  $('#styleGroup')?.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{ STATE.genStyle=b.dataset.style; $('#styleGroup').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b)); }));
+  $('#genFileBtn')?.addEventListener('click',()=>$('#genFileInput').click());
+  $('#genFileInput')?.addEventListener('change',async e=>{
+    const file=e.target.files[0]; if(!file) return;
+    const statusEl=$('#genFileStatus');
+    const statusText=$('#genFileStatusText');
+    statusEl.style.display='flex';
+    statusText.textContent=`"${file.name}" 읽는 중...`;
+    try{
+      const name=file.name.toLowerCase();
+      let text='';
+      if(name.endsWith('.txt')) text=await file.text();
+      else if(name.endsWith('.pdf')) text=await extractPdfText(file);
+      else if(name.endsWith('.docx')||name.endsWith('.doc')){
+        const buf=await file.arrayBuffer();
+        const result=await mammoth.extractRawText({arrayBuffer:buf});
+        text=result.value;
+      } else if(file.type.startsWith('image/')){
+        const result=await Tesseract.recognize(file,'eng+kor');
+        text=result.data.text;
+      } else throw new Error('지원하지 않는 파일 형식 (.txt .pdf .docx .doc 이미지)');
+      if(!text.trim()) throw new Error('텍스트를 추출하지 못했습니다');
+      STATE.genRefText=text.trim();
+      STATE.genRefFileName=file.name;
+      statusText.textContent=`📎 ${file.name} (${(text.length/1000).toFixed(1)}k자 추출됨)`;
+      if(!$('#genTopic').value.trim()) $('#genTopic').placeholder='주제 힌트 (선택, 비워도 됩니다)';
+    }catch(err){
+      statusEl.style.display='none';
+      STATE.genRefText=''; STATE.genRefFileName='';
+      toast('파일 읽기 실패: '+err.message);
+    }
+    e.target.value='';
+  });
+  $('#genFileRemoveBtn')?.addEventListener('click',()=>{ resetGenFile(); $('#genTopic').placeholder='예: daily life, school trip'; });
   $('#formatGroup')?.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{ STATE.genFormat=b.dataset.fmt; $('#formatGroup').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b)); }));
 
   const stb=$('#scrollTopBtn');

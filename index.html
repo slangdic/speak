@@ -129,6 +129,17 @@ input:focus,textarea:focus{outline:none}
 .hard-tip b{color:var(--sage-dk);font-size:.78rem}
 .hard-rule{margin-top:6px;color:var(--ink-soft);font-size:.82rem;background:var(--card-soft);padding:6px 10px;border-radius:8px;border-left:3px solid var(--beige-dk);line-height:1.5}
 .hard-rule b{color:#a07530;font-size:.78rem;margin-right:4px}
+.hard-sounds{display:flex;flex-direction:column;gap:4px;margin-top:6px;background:var(--card-soft);border-radius:8px;padding:8px 10px}
+.hard-sounds .row{display:flex;align-items:baseline;gap:8px;font-size:.88rem;line-height:1.5}
+.hard-sounds .row b{flex-shrink:0;font-size:.72rem;font-weight:700;padding:2px 6px;border-radius:4px;min-width:54px;text-align:center}
+.hard-sounds .row.expected b{background:#f1d5d5;color:#a04848}
+.hard-sounds .row.actual b{background:var(--sage-soft);color:var(--sage-dk)}
+.hard-sounds .row .txt{flex:1;font-family:'Inter','Noto Sans KR',sans-serif}
+.hard-sounds .row.expected .txt{color:var(--ink-soft);text-decoration:line-through;text-decoration-color:rgba(160,72,72,.4)}
+.hard-sounds .row.actual .txt{color:var(--ink);font-weight:600}
+.hard-overall{background:linear-gradient(135deg,var(--sage-soft) 0%,#e8f0e3 100%);border-radius:10px;padding:12px 14px;margin-top:12px;border-left:4px solid var(--sage-dk)}
+.hard-overall .label{font-size:.76rem;font-weight:700;color:var(--sage-dk);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;display:flex;align-items:center;gap:4px}
+.hard-overall .text{font-size:.92rem;color:var(--ink);line-height:1.6}
 
 .side-overlay{position:fixed;inset:0;background:rgba(40,30,20,.4);z-index:200;display:none;backdrop-filter:blur(2px)}
 .side-overlay.show{display:block}
@@ -831,7 +842,7 @@ function updateOriginalModeAvailability(){
 function buildListeningCoachPrompt(sentence){
   return `You are a professional English listening instructor specializing in teaching Korean learners. Your expertise is grounded in established ESL/EFL methodologies: connected speech analysis (Cauldwell's "Streaming Speech"), Celce-Murcia's pronunciation pedagogy, Gilbert's "Clear Speech" prosody framework, Field's listening pedagogy, and contrastive analysis between Korean and American English phonology.
 
-For the sentence below, identify EVERY feature that makes it hard for Korean learners to HEAR (not just pronounce), and provide concrete listening coaching tips.
+For the sentence below, identify EVERY feature that makes it hard for Korean learners to HEAR (not just pronounce). Do not skip or summarize — list every relevant phenomenon found in the sentence.
 
 Cover ALL relevant phenomena:
 - Linking/liaison (consonant-to-vowel, vowel-to-vowel with /j/ /w/ glides, consonant clusters across word boundaries)
@@ -858,23 +869,29 @@ Cover ALL relevant phenomena:
   * Syllable-timed reading habit transferred to listening
   * Failure to track stressed syllables as anchor points
 
-For each feature found, return STRICT JSON array ONLY:
-[{
-  "quote": "exact phrase from the sentence",
-  "type": "linking|flap|held|glottal|t_deletion|reduction|schwa|contraction|rhythm|stress|intonation|assimilation|elision|intrusion|silent|vowel|korean_interference|idiom",
-  "phonetic": "American IPA or simplified pronunciation guide (use [brackets])",
-  "soundsLike": "어떻게 들리는지 한글 음차 (예: 'get it' → '게딧', 'want to' → '워너')",
-  "whyHard": "한국인 학습자가 왜 이 부분을 놓치는지 1-2문장. 대조 분석(contrastive analysis) 관점에서 한국어 음운 체계와의 차이를 구체적으로 설명",
-  "coachingTip": "이 부분을 잘 듣기 위한 구체적인 청취 훈련법 2-3문장. 전문 교수법에 근거 (shadowing 포인트, 청취 단서, top-down/bottom-up 전략, chunking, 음소 인식 훈련, 예측 전략 중 적합한 것을 명시적으로 활용)",
-  "rule": "관련된 공식 음운/운율 규칙 또는 비공식 패턴의 이름과 한 줄 설명 (예: 'Flap T Rule: 강세 없는 모음 사이의 /t/는 [ɾ]로 약화되어 한국어 ㄹ과 유사하게 들림')"
-}]
+Return STRICT JSON ONLY in this exact shape:
+{
+  "items": [
+    {
+      "quote": "exact phrase from the sentence",
+      "type": "linking|flap|held|glottal|t_deletion|reduction|schwa|contraction|rhythm|stress|intonation|assimilation|elision|intrusion|silent|vowel|korean_interference|idiom",
+      "phonetic": "American IPA or simplified pronunciation guide in [brackets]",
+      "expectedSound": "한국인이 철자만 보고 정직하게 읽을 때 기대하는 한글 음차 (예: 'check it' → '체크 잇', 'should have' → '슈드 해브')",
+      "actualSound": "원어민이 실제로 내는 한글 음차 (예: 'check it' → '채킷', 'should have' → '슈덥')",
+      "whyHard": "한국인 학습자가 왜 이 부분을 놓치는지 1-2문장. 대조 분석 관점에서 한국어 음운 체계와의 차이를 구체적으로 설명",
+      "rule": "관련된 공식 음운/운율 규칙 또는 비공식 패턴의 이름과 한 줄 설명 (예: 'Flap T Rule: 강세 없는 모음 사이의 /t/는 [ɾ]로 약화되어 한국어 ㄹ과 유사하게 들림')"
+    }
+  ],
+  "overallCoaching": "이 문장 전체를 잘 듣기 위한 통합 코칭 한마디. 리듬 청크 묶음 위주로 작성 (예: '글자는 잊고 [아이슈덥]-[톨쥬]-[어바웃더미링] 세 덩어리로 끊어 리듬을 타며 듣고 따라하세요'). 2-3문장 이내, 존댓말 교수자 톤."
+}
 
 Requirements:
-- List EVERY relevant feature in the sentence (do not summarize or skip).
+- "items" must include EVERY relevant feature in the sentence. Do not skip or summarize.
+- "expectedSound" must reflect what a Korean learner would naively read from spelling. "actualSound" must reflect natural American connected speech. The contrast between the two is the core teaching point.
 - "whyHard" must reflect Korean-English contrastive analysis, not generic explanations.
-- "coachingTip" must be ACTIONABLE listening practice advice tied to the specific feature, not just description.
-- "rule" should cite the named phonological/prosodic rule when applicable (Flap T Rule, Linking Rule, Weak Form Rule, Nuclear Stress Rule, Tonic Stress, Thought Group Rule, Anticipatory Coarticulation, etc.).
-- All Korean fields in natural, professional Korean (존댓말, 교수자 톤).
+- "rule" should cite the named phonological/prosodic rule when applicable (Flap T Rule, Linking Rule, Weak Form Rule, Nuclear Stress Rule, Tonic Stress, Thought Group Rule, Anticipatory Coarticulation, H-dropping, etc.).
+- "overallCoaching" must integrate all the individual features into ONE actionable listening strategy for the whole sentence, focused on rhythm chunks rather than per-item tips.
+- All Korean fields in natural professional Korean (존댓말, 교수자 톤).
 
 Sentence: "${sentence}"`;
 }
@@ -884,7 +901,10 @@ function startWarmupForDoc(doc){
   stopWarmup();
   if(!doc || !Array.isArray(doc.sentences)) return;
   STATE.warmupQueue=[];
-  doc.sentences.forEach(s=>{ if(!s.hardListening) STATE.warmupQueue.push({type:'hard',sid:s.id,priority:2}); });
+  doc.sentences.forEach(s=>{
+    const has = s.hardListening && (Array.isArray(s.hardListening) ? s.hardListening.length>0 : (s.hardListening.items && s.hardListening.items.length>0));
+    if(!has) STATE.warmupQueue.push({type:'hard',sid:s.id,priority:2});
+  });
 
   const haveWords=new Set(Object.keys(doc.wordData||{}));
   const pending=new Set();
@@ -926,7 +946,11 @@ function updateWarmupBar(){
   if(!STATE.warmupRunning || STATE.warmupQueue.length===0){ bar.classList.remove('active'); return; }
   const doc=STATE.currentDoc; if(!doc){ bar.classList.remove('active'); return; }
   const total=doc.sentences.length;
-  const hardDone=doc.sentences.filter(s=>s.hardListening).length;
+  const hardDone=doc.sentences.filter(s=>{
+    if(!s.hardListening) return false;
+    if(Array.isArray(s.hardListening)) return s.hardListening.length>0;
+    return Array.isArray(s.hardListening.items) && s.hardListening.items.length>0;
+  }).length;
   const wordsTotal=new Set(); doc.sentences.forEach(s=>(s.words||[]).forEach(w=>{const n=normalizeWord(w); if(n) wordsTotal.add(n);}));
   const wordsDone=Object.keys(doc.wordData||{}).filter(k=>!k.startsWith('phrase::')).length;
   tx.textContent=`준비 중 · 리스닝 ${hardDone}/${total} · 단어 ${wordsDone}/${wordsTotal.size}`;
@@ -992,11 +1016,11 @@ async function fetchHardListening(sid){
   const body={contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{temperature:0.3,maxOutputTokens:3072,responseMimeType:'application/json'}};
   const res=await callGemini(body,{priority:2});
   const txt=res?.candidates?.[0]?.content?.parts?.[0]?.text||'[]';
-  const arr=safeJsonParse(txt,[]);
-  s.hardListening=Array.isArray(arr)?arr:[];
+  const parsed = safeJsonParse(txt, {items:[], overallCoaching:''});
+  s.hardListening = Array.isArray(parsed) ? parsed : (parsed && typeof parsed === 'object' ? parsed : {items:[], overallCoaching:''});
   await dbPut('documents',doc).catch(()=>{});
   const block=document.querySelector(`[data-hard-for="${sid}"]`);
-  if(block && block.classList.contains('show')) renderHardListeningInto(block, s.hardListening);
+  if(block && block.classList.contains('show')) renderHardListeningInto(block, s.hardListening, s.text);
 }
 async function fetchWordBatch(words){
   const doc=STATE.currentDoc;
@@ -1547,8 +1571,12 @@ async function handleHardToggle(s, card){
   const block=card.querySelector(`[data-hard-for="${s.id}"]`);
   if(block.classList.contains('show')){ block.classList.remove('show'); return; }
   block.classList.add('show');
-  if(s.hardListening && s.hardListening.length>0){
-    renderHardListeningInto(block, s.hardListening);
+  const hasCache = s.hardListening && (
+    Array.isArray(s.hardListening) ? s.hardListening.length > 0
+    : (s.hardListening.items && s.hardListening.items.length > 0)
+  );
+  if(hasCache){
+    renderHardListeningInto(block, s.hardListening, s.text);
     return;
   }
   block.innerHTML=`<div class="wm-loading"><div class="wm-spinner"></div>리스닝 코칭 분석 중...</div>`;
@@ -1557,37 +1585,93 @@ async function handleHardToggle(s, card){
     const prompt=buildListeningCoachPrompt(s.text);
     const body={contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{temperature:0.3,maxOutputTokens:3072,responseMimeType:'application/json'}};
     const res=await callGeminiDirect(body);
-    const txt=res?.candidates?.[0]?.content?.parts?.[0]?.text||'[]';
-    const arr=safeJsonParse(txt,[]);
-    s.hardListening=Array.isArray(arr)?arr:[];
+    const txt=res?.candidates?.[0]?.content?.parts?.[0]?.text||'{}';
+    const parsed = safeJsonParse(txt, {items:[], overallCoaching:''});
+    s.hardListening = Array.isArray(parsed) ? parsed : (parsed && typeof parsed === 'object' ? parsed : {items:[], overallCoaching:''});
     if(STATE.currentDoc){
       const di=STATE.currentDoc.sentences.findIndex(x=>x.id===s.id);
       if(di>=0){ STATE.currentDoc.sentences[di]=s; await dbPut('documents',STATE.currentDoc).catch(()=>{}); }
     }
-    renderHardListeningInto(block, s.hardListening);
+    renderHardListeningInto(block, s.hardListening, s.text);
   }catch(e){ block.innerHTML=`<div class="wm-loading">분석 실패: ${escapeHtml(e.message)}</div>`; }
   finally{ clearUserAction(); }
 }
-function renderHardListeningInto(block, items){
-  if(!items || items.length===0){ block.innerHTML='<div class="wm-loading">특이 발음 사항이 없습니다.</div>'; return; }
-  block.innerHTML=items.map((it,i)=>`
-    <div class="hard-item">
-      <div class="hard-head">
-        <span class="hard-quote">${escapeHtml(it.quote||'')}</span>
-        <span class="hard-type">${escapeHtml(it.type||'')}</span>
-        <button class="hard-play" data-i="${i}" title="듣기"><svg viewBox="0 0 24 24"><polygon points="6 4 20 12 6 20 6 4"/></svg></button>
+// 5대 고빈도 우선순위 매핑 (낮을수록 먼저 표시)
+const HARD_TYPE_PRIORITY = {
+  elision: 1, t_deletion: 1, held: 1, silent: 1,
+  linking: 2, assimilation: 2, intrusion: 2,
+  reduction: 3, schwa: 3, vowel: 3,
+  flap: 4,
+  contraction: 5,
+  rhythm: 6, stress: 6, intonation: 6,
+  glottal: 7, korean_interference: 7, idiom: 7
+};
+function sortHardItems(items, sentenceText){
+  const text = String(sentenceText||'').toLowerCase();
+  return items.slice().map((it,i)=>{
+    const pri = HARD_TYPE_PRIORITY[it.type] || 99;
+    const quote = String(it.quote||'').toLowerCase();
+    const pos = quote ? text.indexOf(quote) : -1;
+    return { it, pri, pos: pos<0 ? 9999+i : pos, idx: i };
+  }).sort((a,b)=>{
+    if (a.pri !== b.pri) return a.pri - b.pri;
+    if (a.pos !== b.pos) return a.pos - b.pos;
+    return a.idx - b.idx;
+  }).map(x=>x.it);
+}
+function renderHardListeningInto(block, items, sentenceText){
+  let arr = [];
+  let overall = '';
+  if (Array.isArray(items)) {
+    arr = items;
+  } else if (items && typeof items === 'object') {
+    arr = Array.isArray(items.items) ? items.items : [];
+    overall = items.overallCoaching || '';
+  }
+  if(!arr || arr.length===0){
+    block.innerHTML='<div class="wm-loading">특이 발음 사항이 없습니다.</div>';
+    return;
+  }
+  if (!sentenceText) {
+    const card = block.closest('.sentence-card');
+    const sEl = card ? card.querySelector('.s-text') : null;
+    sentenceText = sEl ? sEl.textContent : '';
+  }
+  const sorted = sortHardItems(arr, sentenceText);
+  const itemsHtml = sorted.map((it,i)=>{
+    const expected = it.expectedSound || '';
+    const actual = it.actualSound || it.soundsLike || '';
+    const legacyTip = it.coachingTip || '';
+    const soundsBlock = (expected || actual) ? `
+      <div class="hard-sounds">
+        ${expected ? `<div class="row expected"><b>기대 소리</b><span class="txt">${escapeHtml(expected)}</span></div>` : ''}
+        ${actual ? `<div class="row actual"><b>실제 소리</b><span class="txt">${escapeHtml(actual)}</span></div>` : ''}
+      </div>` : '';
+    return `
+      <div class="hard-item">
+        <div class="hard-head">
+          <span class="hard-quote">${escapeHtml(it.quote||'')}</span>
+          <span class="hard-type">${escapeHtml(it.type||'')}</span>
+          <button class="hard-play" data-i="${i}" title="듣기"><svg viewBox="0 0 24 24"><polygon points="6 4 20 12 6 20 6 4"/></svg></button>
+        </div>
+        ${it.phonetic?`<div class="hard-phonetic">${escapeHtml(it.phonetic)}</div>`:''}
+        ${soundsBlock}
+        ${it.whyHard?`<div class="hard-desc"><b>한국인이 놓치는 이유</b>${escapeHtml(it.whyHard)}</div>`:''}
+        ${legacyTip?`<div class="hard-tip"><b>🎯 코칭 팁</b>${escapeHtml(legacyTip)}</div>`:''}
+        ${it.rule?`<div class="hard-rule"><b>📘 규칙</b>${escapeHtml(it.rule)}</div>`:''}
       </div>
-      ${it.phonetic?`<div class="hard-phonetic">${escapeHtml(it.phonetic)}</div>`:''}
-      ${it.soundsLike?`<div class="hard-soundslike"><b>들리는 소리</b>${escapeHtml(it.soundsLike)}</div>`:''}
-      ${it.whyHard?`<div class="hard-desc"><b>한국인이 놓치는 이유</b>${escapeHtml(it.whyHard)}</div>`:''}
-      ${it.coachingTip?`<div class="hard-tip"><b>🎯 코칭 팁</b>${escapeHtml(it.coachingTip)}</div>`:''}
-      ${it.rule?`<div class="hard-rule"><b>📘 규칙</b>${escapeHtml(it.rule)}</div>`:''}
-    </div>
-  `).join('');
+    `;
+  }).join('');
+  const overallHtml = overall ? `
+    <div class="hard-overall">
+      <div class="label">🎙️ 코치의 한마디</div>
+      <div class="text">${escapeHtml(overall)}</div>
+    </div>` : '';
+  block.innerHTML = itemsHtml + overallHtml;
   block.querySelectorAll('.hard-play').forEach(btn=>{
     btn.addEventListener('click',()=>{
       const idx=Number(btn.dataset.i);
-      const q=items[idx]?.quote;
+      const q=sorted[idx]?.quote;
       if(q) speak(q,{btn});
     });
   });

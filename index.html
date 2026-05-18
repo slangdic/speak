@@ -380,6 +380,14 @@ input:focus,textarea:focus{outline:none}
     <button class="opt-chip" data-vmode="original" id="originalChip">원본</button>
   </div>
 
+  <h4>Gemini 모델</h4>
+  <div class="opt-group" id="modelGroup">
+    <button class="opt-chip" data-model="gemini-2.5-flash">2.5 Flash</button>
+    <button class="opt-chip active" data-model="gemini-2.5-flash-lite">2.5 Flash-Lite</button>
+    <button class="opt-chip" data-model="gemini-2.0-flash">2.0 Flash</button>
+  </div>
+  <div id="modelNote" style="font-size:.74rem;color:var(--ink-mute);margin-top:6px"></div>
+
   <h4>저장 데이터</h4>
   <div class="storage-box" id="storageBox">
     <div class="row"><span>문서 수</span><b id="stDocs">0</b></div>
@@ -480,6 +488,7 @@ const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
 const STATE = {
   fontSize: 16,
   speed: 1.0,
+  geminiModel: 'gemini-2.5-flash-lite',
   gender: 'female',
   voiceChar: 'natural1',
   voiceMode: 'tts',
@@ -630,7 +639,7 @@ async function processGeminiQueue(){
       await new Promise(r=>setTimeout(r,GEMINI_MIN_INTERVAL-elapsed));
     }
     try{
-      const res=await fetch('/api/gemini',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(item.body)});
+      const res=await fetch('/api/gemini',{method:'POST',headers:{'Content-Type':'application/json','X-Gemini-Model': STATE.geminiModel},body:JSON.stringify(item.body)});
       STATE.geminiLastCall=Date.now();
       if(!res.ok){ const t=await res.text(); throw new Error(`Gemini ${res.status}: ${t.slice(0,200)}`); }
       const data=await res.json();
@@ -640,7 +649,7 @@ async function processGeminiQueue(){
   STATE.geminiBusy=false;
 }
 async function callGeminiDirect(body){
-  const res=await fetch('/api/gemini',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const res=await fetch('/api/gemini',{method:'POST',headers:{'Content-Type':'application/json','X-Gemini-Model': STATE.geminiModel},body:JSON.stringify(body)});
   if(!res.ok){ const t=await res.text(); throw new Error(`Gemini ${res.status}: ${t.slice(0,200)}`); }
   return res.json();
 }
@@ -1121,7 +1130,7 @@ async function handleAnalyze(){
 async function handleYouTube(url){
   setStatus('YouTube 자막 가져오는 중...'); showProgress(0,'자막 추출 중');
   try{
-    const res=await fetch(`/api/youtube?url=${encodeURIComponent(url)}`);
+    const res=await fetch(`/api/youtube?url=${encodeURIComponent(url)}&model=${encodeURIComponent(STATE.geminiModel)}`);
     if(!res.ok){ const err=await res.text(); throw new Error(`서버 오류 ${res.status}: ${err.slice(0,200)}`); }
     const data=await res.json();
     if(!data.fullText) throw new Error('자막/전사 결과가 비어있습니다');
@@ -1172,6 +1181,16 @@ function titleFromText(t){
   const w=String(t).trim().replace(/\s+/g,' ').split(' ').slice(0,3);
   return w.join(' ')||'제목 없음';
 }
+function extractEnglishOnly(text){
+  const lines = String(text||'').split(/\r?\n/);
+  const filtered = lines.filter(line => {
+    const t = line.trim();
+    if(!t) return false;
+    const korCount = (t.match(/[\uAC00-\uD7A3\u1100-\u11FF\u3130-\u318F]/g)||[]).length;
+    return korCount / t.length < 0.05;
+  });
+  return filtered.join('\n');
+}
 function splitSentences(t){
   const c=String(t||'').replace(/\s+/g,' ').trim();
   const r=c.match(/[^.!?]+[.!?]+|\S[^.!?]*$/g)||[];
@@ -1179,6 +1198,7 @@ function splitSentences(t){
 }
 
 async function analyzeText(text, meta={}){
+  text = extractEnglishOnly(text);
   stopWarmup();
   STATE.sentences=[]; STATE.analyzing=true; STATE.currentFullText=text;
   const container=$('#sentenceList'); if(container) container.innerHTML='';
@@ -2414,6 +2434,25 @@ function bindUI(){
       }catch(e){}
     }
   });
+
+  $('#modelGroup')?.querySelectorAll('button').forEach(b=>{
+    b.addEventListener('click',()=>{
+      STATE.geminiModel = b.dataset.model;
+      $('#modelGroup').querySelectorAll('button').forEach(x=>x.classList.toggle('active', x===b));
+      localStorage.setItem('ts_geminiModel', STATE.geminiModel);
+      updateModelNote();
+      toast(`모델 변경: ${b.textContent.trim()}`);
+    });
+  });
+}
+function updateModelNote(){
+  const note = $('#modelNote'); if(!note) return;
+  const desc = {
+    'gemini-2.5-flash': '최고 품질 · 무료 쿼터 낮음 (RPM 10, RPD 250)',
+    'gemini-2.5-flash-lite': '권장 · 빠르고 쿼터 넉넉 (RPM 15, RPD 1000)',
+    'gemini-2.0-flash': '안정적 · 중간 쿼터 (RPM 15, RPD 200)'
+  };
+  note.textContent = `현재: ${STATE.geminiModel} — ${desc[STATE.geminiModel] || ''}`;
 }
 function setFontSize(v){
   v=Math.max(12,Math.min(22,v));
@@ -2436,6 +2475,10 @@ async function preloadWordCache(){
 /* ---------- Init ---------- */
 async function init(){
   const fs=Number(localStorage.getItem('ts_font'))||16; setFontSize(fs);
+  const savedModel = localStorage.getItem('ts_geminiModel') || 'gemini-2.5-flash-lite';
+  const ALLOWED = ['gemini-2.5-flash','gemini-2.5-flash-lite','gemini-2.0-flash'];
+  STATE.geminiModel = ALLOWED.includes(savedModel) ? savedModel : 'gemini-2.5-flash-lite';
+  $$('#modelGroup .opt-chip').forEach(b => b.classList.toggle('active', b.dataset.model === STATE.geminiModel));
   const sp=Number(localStorage.getItem('ts_speed'))||1.0;
   STATE.speed=sp;
 
@@ -2449,6 +2492,7 @@ async function init(){
 
   setupObserver();
   bindUI();
+  updateModelNote();
 
   try{ STATE.db=await openDB(); }catch(e){ console.error('DB open failed',e); }
 

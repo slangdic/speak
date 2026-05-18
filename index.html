@@ -173,12 +173,12 @@ input:focus,textarea:focus{outline:none}
 .doc-actions svg{width:14px;height:14px;stroke:var(--ink-soft);fill:none;stroke-width:2}
 .doc-bulk{display:flex;gap:6px;margin-top:6px;padding:8px;background:var(--card-soft);border-radius:8px}
 
-.wmodal-overlay{position:fixed;inset:0;background:rgba(40,30,20,.4);z-index:300;display:none;backdrop-filter:blur(2px)}
+.wmodal-overlay{position:fixed;inset:0;background:rgba(40,30,20,.4);z-index:300;display:none}
 .wmodal-overlay.show{display:block}
 .wmodal-stack{position:fixed;inset:0;z-index:310;display:none;pointer-events:none}
 .wmodal-stack.show{display:block}
-.wmodal{position:absolute;left:50%;background:var(--card);border-radius:18px;width:min(420px,92vw);max-height:80vh;overflow-y:auto;box-shadow:var(--shadow-lg);pointer-events:auto;padding:18px;transform:translateX(-50%);animation:wmIn .14s ease-out}
-@keyframes wmIn{from{opacity:0;transform:translateX(-50%) translateY(-8px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+.wmodal{position:absolute;left:50%;background:var(--card);border-radius:18px;width:min(420px,92vw);max-height:80vh;overflow-y:auto;box-shadow:var(--shadow-lg);pointer-events:auto;padding:18px;transform:translateX(-50%);animation:wmIn .08s ease-out}
+@keyframes wmIn{from{opacity:.4;transform:translateX(-50%) translateY(-4px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
 .wmodal-close{position:absolute;top:10px;right:10px;width:30px;height:30px;border-radius:50%;background:var(--bg);display:flex;align-items:center;justify-content:center}
 .wmodal-close svg{width:16px;height:16px;stroke:var(--ink);stroke-width:2.4;fill:none}
 .wm-head{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:4px;padding-right:36px}
@@ -202,6 +202,14 @@ input:focus,textarea:focus{outline:none}
 .wm-loading{text-align:center;padding:24px;color:var(--ink-soft);font-size:.9rem}
 .wm-spinner{width:24px;height:24px;border:3px solid var(--line);border-top-color:var(--sage);border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 8px}
 @keyframes spin{to{transform:rotate(360deg)}}
+
+.wm-skel{background:linear-gradient(90deg,var(--card-soft) 0%,var(--bg-alt) 50%,var(--card-soft) 100%);background-size:200% 100%;animation:skel 1.2s linear infinite;border-radius:6px}
+@keyframes skel{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.wm-skel-line{height:14px;margin:6px 0}
+.wm-skel-line.w70{width:70%}
+.wm-skel-line.w90{width:90%}
+.wm-skel-line.w50{width:50%}
+.wm-skel-block{height:48px;margin-top:6px}
 
 .gen-overlay{position:fixed;inset:0;background:rgba(40,30,20,.4);z-index:280;display:none;backdrop-filter:blur(2px)}
 .gen-overlay.show{display:flex;align-items:center;justify-content:center;padding:16px}
@@ -476,6 +484,7 @@ const STATE = {
   warmupRunning: false,
   warmupPaused: false,
   userActionActive: false,
+  userActionUntil: 0,
   visibleSentences: new Set(),
   observer: null,
   sentences: [],
@@ -501,12 +510,16 @@ const STATE = {
   recognizer: null,
   wordMemCache: new Map(),
   wordPrefetchPending: new Set(),
+  wordPrefetchInflight: new Set(),
+  prefetchDebounce: new Map(),
   resumingDocs: new Set(),
 };
 
-const GEMINI_MIN_INTERVAL = 10000;
-const WORD_BATCH_SIZE = 8;
-const WARMUP_INTERVAL = 10000;
+const GEMINI_MIN_INTERVAL = 8000;
+const WORD_BATCH_SIZE = 4;
+const WARMUP_INTERVAL = 5000;
+const PREFETCH_MAX_INFLIGHT = 2;
+const PREFETCH_DEBOUNCE_MS = 120;
 
 function toast(msg, ms=2400){
   const t=$('#toast'); if(!t) return;
@@ -531,6 +544,20 @@ function safeJsonParse(txt, fallback){
   }
 }
 
+function markUserAction(durationMs=8000){
+  STATE.userActionActive = true;
+  STATE.userActionUntil = Date.now() + durationMs;
+}
+function clearUserAction(){
+  STATE.userActionActive = false;
+  STATE.userActionUntil = 0;
+}
+function isUserActionActive(){
+  if (STATE.userActionActive) return true;
+  if (STATE.userActionUntil && Date.now() < STATE.userActionUntil) return true;
+  return false;
+}
+
 /* ---------- IndexedDB ---------- */
 const DB_NAME='thinking_skills_db';
 const DB_VERSION=3;
@@ -552,6 +579,26 @@ function dbPut(store,val){return new Promise((res,rej)=>{if(!STATE.db)return rej
 function dbDel(store,key){return new Promise((res,rej)=>{if(!STATE.db)return res();const tx=STATE.db.transaction(store,'readwrite');const r=tx.objectStore(store).delete(key);r.onsuccess=()=>res();r.onerror=()=>rej(r.error);});}
 function dbAll(store){return new Promise((res,rej)=>{if(!STATE.db)return res([]);const tx=STATE.db.transaction(store,'readonly');const r=tx.objectStore(store).getAll();r.onsuccess=()=>res(r.result||[]);r.onerror=()=>rej(r.error);});}
 function dbClear(store){return new Promise((res,rej)=>{if(!STATE.db)return res();const tx=STATE.db.transaction(store,'readwrite');const r=tx.objectStore(store).clear();r.onsuccess=()=>res();r.onerror=()=>rej(r.error);});}
+
+/* ---------- 메모리 캐시 (단일 진실원) ---------- */
+function memCacheGet(key){
+  if (!key) return null;
+  if (STATE.wordMemCache.has(key)) return STATE.wordMemCache.get(key);
+  const doc = STATE.currentDoc;
+  if (doc && doc.wordData && doc.wordData[key]) {
+    STATE.wordMemCache.set(key, doc.wordData[key]);
+    return doc.wordData[key];
+  }
+  return null;
+}
+function memCacheSet(key, data){
+  if (!key || !data) return;
+  STATE.wordMemCache.set(key, data);
+  if (STATE.currentDoc) {
+    STATE.currentDoc.wordData = STATE.currentDoc.wordData || {};
+    STATE.currentDoc.wordData[key] = data;
+  }
+}
 
 /* ---------- Gemini queue ---------- */
 function callGemini(body, opts={}){
@@ -780,7 +827,7 @@ function updateOriginalModeAvailability(){
   chip.style.pointerEvents=ok?'auto':'none';
 }
 
-/* ---------- Listening coaching prompt (전문 ESL 교수법 기반) ---------- */
+/* ---------- Listening coaching prompt ---------- */
 function buildListeningCoachPrompt(sentence){
   return `You are a professional English listening instructor specializing in teaching Korean learners. Your expertise is grounded in established ESL/EFL methodologies: connected speech analysis (Cauldwell's "Streaming Speech"), Celce-Murcia's pronunciation pedagogy, Gilbert's "Clear Speech" prosody framework, Field's listening pedagogy, and contrastive analysis between Korean and American English phonology.
 
@@ -838,6 +885,7 @@ function startWarmupForDoc(doc){
   if(!doc || !Array.isArray(doc.sentences)) return;
   STATE.warmupQueue=[];
   doc.sentences.forEach(s=>{ if(!s.hardListening) STATE.warmupQueue.push({type:'hard',sid:s.id,priority:2}); });
+
   const haveWords=new Set(Object.keys(doc.wordData||{}));
   const pending=new Set();
   doc.sentences.forEach(s=>{ (s.words||[]).forEach(w=>{ const nw=normalizeWord(w); if(nw && !haveWords.has(nw) && !STATE.wordMemCache.has(nw)) pending.add(nw); }); });
@@ -845,6 +893,24 @@ function startWarmupForDoc(doc){
   for(let i=0;i<arr.length;i+=WORD_BATCH_SIZE){
     STATE.warmupQueue.push({type:'words',words:arr.slice(i,i+WORD_BATCH_SIZE),priority:3});
   }
+
+  const phrasePending = [];
+  doc.sentences.forEach(s=>{
+    (s.phrases||[]).forEach(ph=>{
+      if(!ph || !ph.text) return;
+      const norm = normalizePhrase(ph.text);
+      if(!norm) return;
+      const cacheKey = 'phrase::'+norm;
+      if(STATE.wordMemCache.has(cacheKey)) return;
+      phrasePending.push({text:ph.text, norm, type:ph.type, meaningKo:ph.meaningKo});
+    });
+  });
+  const seenPhrase = new Set();
+  const uniqPhrases = phrasePending.filter(p=>{ if(seenPhrase.has(p.norm)) return false; seenPhrase.add(p.norm); return true; });
+  for(const ph of uniqPhrases){
+    STATE.warmupQueue.push({type:'phrase', phrase:ph, priority:4});
+  }
+
   STATE.warmupRunning=true;
   updateWarmupBar();
   processWarmup();
@@ -862,7 +928,7 @@ function updateWarmupBar(){
   const total=doc.sentences.length;
   const hardDone=doc.sentences.filter(s=>s.hardListening).length;
   const wordsTotal=new Set(); doc.sentences.forEach(s=>(s.words||[]).forEach(w=>{const n=normalizeWord(w); if(n) wordsTotal.add(n);}));
-  const wordsDone=Object.keys(doc.wordData||{}).length;
+  const wordsDone=Object.keys(doc.wordData||{}).filter(k=>!k.startsWith('phrase::')).length;
   tx.textContent=`준비 중 · 리스닝 ${hardDone}/${total} · 단어 ${wordsDone}/${wordsTotal.size}`;
   bar.classList.add('active');
 }
@@ -874,19 +940,25 @@ async function processWarmup(){
     if(STATE.currentDoc){ STATE.currentDoc.warmupComplete=true; await dbPut('documents',STATE.currentDoc).catch(()=>{}); refreshDocList(); }
     return;
   }
-  if(STATE.userActionActive || STATE.warmupPaused){
+  if(isUserActionActive() || STATE.warmupPaused){
     setTimeout(processWarmup,1500); return;
   }
+
   let idx = STATE.warmupQueue.findIndex(it=>it.type==='hard' && STATE.visibleSentences.has(it.sid));
   if(idx<0){
     const visibleWords = collectVisibleWords();
     idx = STATE.warmupQueue.findIndex(it=>it.type==='words' && it.words.some(w=>visibleWords.has(w)));
+  }
+  if(idx<0){
+    const visiblePhrases = collectVisiblePhrases();
+    idx = STATE.warmupQueue.findIndex(it=>it.type==='phrase' && visiblePhrases.has(it.phrase.norm));
   }
   if(idx<0) idx=0;
   const item=STATE.warmupQueue.splice(idx,1)[0];
   try{
     if(item.type==='hard') await fetchHardListening(item.sid);
     else if(item.type==='words') await fetchWordBatch(item.words);
+    else if(item.type==='phrase') await fetchPhraseData(item.phrase);
   }catch(e){ console.warn('warmup item failed',e); }
   updateWarmupBar();
   setTimeout(processWarmup, WARMUP_INTERVAL);
@@ -897,6 +969,19 @@ function collectVisibleWords(){
   for (const sid of STATE.visibleSentences) {
     const s = doc.sentences.find(x=>x.id===sid); if (!s) continue;
     (s.words||[]).forEach(w=>{ const n = normalizeWord(w); if (n) set.add(n); });
+  }
+  return set;
+}
+function collectVisiblePhrases(){
+  const set = new Set();
+  const doc = STATE.currentDoc; if (!doc) return set;
+  for (const sid of STATE.visibleSentences) {
+    const s = doc.sentences.find(x=>x.id===sid); if (!s) continue;
+    (s.phrases||[]).forEach(ph=>{
+      if(!ph || !ph.text) return;
+      const norm = normalizePhrase(ph.text);
+      if(norm) set.add(norm);
+    });
   }
   return set;
 }
@@ -914,19 +999,18 @@ async function fetchHardListening(sid){
   if(block && block.classList.contains('show')) renderHardListeningInto(block, s.hardListening);
 }
 async function fetchWordBatch(words){
-  const doc=STATE.currentDoc; if(!doc) return;
-  doc.wordData=doc.wordData||{};
-  const need = words.filter(w=>!doc.wordData[w] && !STATE.wordMemCache.has(w));
+  const doc=STATE.currentDoc;
+  const need = words.filter(w=>!memCacheGet(w));
   if(need.length===0) return;
   const stillNeed=[];
   for(const w of need){
     try{
       const c=await dbGet('words',w);
-      if(c && c.data){ STATE.wordMemCache.set(w,c.data); doc.wordData[w]=c.data; }
+      if(c && c.data){ memCacheSet(w, c.data); }
       else stillNeed.push(w);
     }catch(e){ stillNeed.push(w); }
   }
-  if(stillNeed.length===0){ await dbPut('documents',doc).catch(()=>{}); return; }
+  if(stillNeed.length===0){ if(doc) await dbPut('documents',doc).catch(()=>{}); return; }
   const prompt=`For each English word below, return detailed info. Use American English. Return JSON array ONLY:\n[{"word":"...","pos":"noun|verb|adj|adv|prep|conj|pron|det|interj","ipa":"American IPA","meaningKo":"Korean meaning","morphKo":"Korean morpheme analysis if applicable","synonyms":["..."],"antonyms":["..."],"examples":[{"en":"...","ko":"..."}]}]\n\nWords: ${stillNeed.join(', ')}`;
   const body={contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{temperature:0.3,maxOutputTokens:4096,responseMimeType:'application/json'}};
   const res=await callGemini(body,{priority:3});
@@ -937,12 +1021,56 @@ async function fetchWordBatch(words){
       if(!item || !item.word) continue;
       const key=normalizeWord(item.word);
       if(!key) continue;
-      doc.wordData[key]=item;
-      STATE.wordMemCache.set(key,item);
+      memCacheSet(key, item);
       try{ await dbPut('words',{word:key,data:item,ts:Date.now()}); }catch(e){}
     }
   }
-  await dbPut('documents',doc).catch(()=>{});
+  if(doc) await dbPut('documents',doc).catch(()=>{});
+  refreshOpenModalsFromCache();
+}
+async function fetchPhraseData(phrase){
+  const cacheKey = 'phrase::' + phrase.norm;
+  if(memCacheGet(cacheKey)) return;
+  try{
+    const c = await dbGet('words', cacheKey);
+    if(c && c.data){ memCacheSet(cacheKey, c.data); return; }
+  }catch(e){}
+  const typeHint = phrase.type ? `Type hint: ${phrase.type}.` : '';
+  const meaningHint = phrase.meaningKo ? `Known Korean meaning: ${phrase.meaningKo}.` : '';
+  const prompt=`Return detailed info for the English multi-word expression "${phrase.text}" in American English. ${typeHint} ${meaningHint}
+Treat it as ONE meaning unit.
+JSON only:
+{
+  "word":"${phrase.text}",
+  "pos":"phrasal_verb|idiom|collocation|compound_noun|proper_noun|fixed_expression",
+  "ipa":"American IPA for the whole phrase",
+  "meaningKo":"Korean meaning of the whole phrase",
+  "morphKo":"구성 요소 분석",
+  "synonyms":["..."],
+  "antonyms":["..."],
+  "examples":[{"en":"...","ko":"..."},{"en":"...","ko":"..."}]
+}`;
+  const body={contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{temperature:0.3,maxOutputTokens:1536,responseMimeType:'application/json'}};
+  const res=await callGemini(body,{priority:4});
+  const txt=res?.candidates?.[0]?.content?.parts?.[0]?.text||'{}';
+  const data=safeJsonParse(txt,{});
+  if(!data || !data.word) data.word=phrase.text;
+  memCacheSet(cacheKey, data);
+  try{ await dbPut('words',{word:cacheKey,data,ts:Date.now()}); }catch(e){}
+  refreshOpenModalsFromCache();
+}
+
+function refreshOpenModalsFromCache(){
+  for(const m of STATE.wmStack){
+    const key = m.dataset.cacheKey;
+    if(!key) continue;
+    if(m.dataset.rendered === '1') continue;
+    const data = memCacheGet(key);
+    if(data){
+      renderWordModalContent(m, data);
+      m.dataset.rendered = '1';
+    }
+  }
 }
 
 /* ---------- Progress ---------- */
@@ -953,18 +1081,18 @@ function hideProgress(){ const c=$('#progressCard'); if(c) c.style.display='none
 
 <script>
 /* ============================================================
-   Part 2 : Input / Analyze / Render / Word Modal / Resume / etc.
+   Part 2 : Input / Analyze / Render / Word Modal / Resume
    ============================================================ */
 
 async function handleAnalyze(){
   const input=$('#urlInput')?.value?.trim();
   if(!input){ toast('URL 또는 텍스트를 입력하세요'); return; }
-  STATE.userActionActive=true;
+  markUserAction(10000);
   try{
     if(/youtube\.com|youtu\.be/.test(input)) await handleYouTube(input);
     else if(/^https?:\/\//.test(input)) toast('YouTube URL 또는 텍스트만 가능합니다');
     else { STATE.currentRawFile=null; await analyzeText(input,{sourceType:'text',title:titleFromText(input)}); }
-  } finally { STATE.userActionActive=false; }
+  } finally { clearUserAction(); }
 }
 async function handleYouTube(url){
   setStatus('YouTube 자막 가져오는 중...'); showProgress(0,'자막 추출 중');
@@ -983,7 +1111,7 @@ async function handleFile(file){
   if(!file) return;
   const name=file.name.toLowerCase();
   setStatus(`${file.name} 처리 중...`); showProgress(0,'파일 분석 중');
-  STATE.userActionActive=true;
+  markUserAction(15000);
   try{
     let text='';
     if(name.endsWith('.txt')) text=await file.text();
@@ -1000,7 +1128,7 @@ async function handleFile(file){
     STATE.sourceType='file'; STATE.currentRawFile=file;
     await analyzeText(text,{sourceType:'file',title:titleFromText(file.name.replace(/\.[^.]+$/,'')),fileName:file.name,fileType:file.type});
   }catch(err){ hideProgress(); setStatus(''); toast('파일 처리 실패: '+err.message); }
-  finally{ STATE.userActionActive=false; }
+  finally{ clearUserAction(); }
 }
 async function extractPdfText(file){
   if(typeof pdfjsLib!=='undefined') pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
@@ -1026,7 +1154,6 @@ function splitSentences(t){
   return r.map(s=>s.trim()).filter(s=>s.length>2);
 }
 
-/* ---------- analyzeText ---------- */
 async function analyzeText(text, meta={}){
   stopWarmup();
   STATE.sentences=[]; STATE.analyzing=true; STATE.currentFullText=text;
@@ -1180,7 +1307,6 @@ async function quickTranslateBoth(text){
   return {literal:obj.literal||'',natural:obj.natural||''};
 }
 
-/* ---------- Resume analysis ---------- */
 async function resumeAnalysis(docId){
   if(STATE.resumingDocs.has(docId)){ toast('이미 이어 분석 진행 중입니다'); return; }
   const doc=await dbGet('documents',docId);
@@ -1219,6 +1345,7 @@ async function resumeAnalysis(docId){
   STATE.sentences = doc.sentences.slice();
   STATE.ytSegments = doc.segments||[]; STATE.currentVideoId = doc.videoId||null;
   STATE.sourceType = doc.sourceType||'text';
+  if(doc.wordData){ for(const [k,v] of Object.entries(doc.wordData)){ STATE.wordMemCache.set(k,v); } }
   if(doc.videoId && doc.segments?.length) await initYouTubePlayer(doc.videoId);
 
   const container=$('#sentenceList'); if(container) container.innerHTML='';
@@ -1284,7 +1411,13 @@ function renderSentenceBlock(s){
         if(single) openWordModal(single);
       }
     });
-    const prefetch = ()=>{ const w=el.dataset.w; if(w) prefetchWord(w); };
+    const prefetch = ()=>{
+      const w=el.dataset.w; if(!w) return;
+      const pos = Number(el.dataset.pos);
+      const hit = findPhraseAtPosition(s.text, s.phrases, pos);
+      if(hit) prefetchPhrase(hit.joinedText, hit.joinedNorm, hit.phrase);
+      else prefetchWord(w);
+    };
     el.addEventListener('pointerenter', prefetch, {passive:true});
     el.addEventListener('touchstart', prefetch, {passive:true});
   });
@@ -1305,7 +1438,6 @@ function renderClickableWords(text, sid){
   }).join('');
 }
 
-/* ---------- Phrase detection (다단어 묶음 탐지) ---------- */
 function tokenizeSentence(sentence){
   const tokens=[];
   const parts=String(sentence||'').split(/(\s+)/);
@@ -1352,18 +1484,18 @@ function findPhraseAtPosition(sentence, phrases, clickedPos){
 async function handlePlayToggle(s, btn){
   if(STATE.currentPlayingBtn===btn){ stopSpeaking(); return; }
   stopSpeaking();
-  STATE.userActionActive=true;
+  markUserAction(6000);
   if(STATE.voiceMode==='original' && Array.isArray(STATE.ytSegments) && STATE.ytSegments.length>0){
     const seg=findSegmentForSentence(s);
     if(seg){
       updatePlayBtnState(btn,true); STATE.currentPlayingBtn=btn;
       playYouTubeSegment(seg.start, seg.end);
-      setTimeout(()=>{ STATE.userActionActive=false; }, (seg.end-seg.start)*1000/STATE.speed+300);
+      setTimeout(()=>{ clearUserAction(); }, (seg.end-seg.start)*1000/STATE.speed+300);
       return;
     }
   }
   await speak(s.text,{btn});
-  STATE.userActionActive=false;
+  clearUserAction();
 }
 function findSegmentForSentence(s){
   if(!STATE.ytSegments || STATE.ytSegments.length===0) return null;
@@ -1420,7 +1552,7 @@ async function handleHardToggle(s, card){
     return;
   }
   block.innerHTML=`<div class="wm-loading"><div class="wm-spinner"></div>리스닝 코칭 분석 중...</div>`;
-  STATE.userActionActive=true;
+  markUserAction(15000);
   try{
     const prompt=buildListeningCoachPrompt(s.text);
     const body={contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{temperature:0.3,maxOutputTokens:3072,responseMimeType:'application/json'}};
@@ -1434,7 +1566,7 @@ async function handleHardToggle(s, card){
     }
     renderHardListeningInto(block, s.hardListening);
   }catch(e){ block.innerHTML=`<div class="wm-loading">분석 실패: ${escapeHtml(e.message)}</div>`; }
-  finally{ STATE.userActionActive=false; }
+  finally{ clearUserAction(); }
 }
 function renderHardListeningInto(block, items){
   if(!items || items.length===0){ block.innerHTML='<div class="wm-loading">특이 발음 사항이 없습니다.</div>'; return; }
@@ -1470,7 +1602,7 @@ async function handleFollowRead(s, card){
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   const rec=new SR();
   rec.lang='en-US'; rec.interimResults=false; rec.maxAlternatives=3;
-  STATE.userActionActive=true;
+  markUserAction(10000);
   rec.onresult=e=>{
     const heard=e.results[0][0].transcript||'';
     const score=calcSimilarity(s.text,heard);
@@ -1479,15 +1611,15 @@ async function handleFollowRead(s, card){
       <div class="tr-row"><div class="tr-label">인식</div><div class="tr-text">${escapeHtml(heard)}</div></div>
       <div class="tr-row"><div class="tr-label">유사도</div><div class="tr-text"><b>${Math.round(score*100)}%</b></div></div>
     `;
-    STATE.userActionActive=false;
+    clearUserAction();
   };
   rec.onerror=e=>{
     if(e.error==='not-allowed') block.innerHTML='<div class="wm-loading">마이크 권한이 거부되었습니다.</div>';
     else block.innerHTML=`<div class="wm-loading">인식 실패: ${escapeHtml(e.error||'')}</div>`;
-    STATE.userActionActive=false;
+    clearUserAction();
   };
-  rec.onend=()=>{ STATE.userActionActive=false; };
-  try{ rec.start(); }catch(e){ block.innerHTML='<div class="wm-loading">인식 시작 실패</div>'; STATE.userActionActive=false; }
+  rec.onend=()=>{ clearUserAction(); };
+  try{ rec.start(); }catch(e){ block.innerHTML='<div class="wm-loading">인식 시작 실패</div>'; clearUserAction(); }
 }
 function calcSimilarity(a,b){
   const A=String(a).toLowerCase().replace(/[^\w\s]/g,'').split(/\s+/).filter(Boolean);
@@ -1507,44 +1639,113 @@ const POS_KR={
   phrase:'표현'
 };
 
+/* ---------- Prefetch ---------- */
+function canStartPrefetch(){
+  return STATE.wordPrefetchInflight.size < PREFETCH_MAX_INFLIGHT;
+}
 function prefetchWord(word){
   const w = normalizeWord(word); if (!w) return;
-  if (STATE.wordMemCache.has(w)) return;
+  if (memCacheGet(w)) return;
+  if (STATE.wordPrefetchPending.has(w)) return;
+  if (STATE.prefetchDebounce.has(w)) return;
+  const timer = setTimeout(()=>{
+    STATE.prefetchDebounce.delete(w);
+    doPrefetchWord(w);
+  }, PREFETCH_DEBOUNCE_MS);
+  STATE.prefetchDebounce.set(w, timer);
+}
+async function doPrefetchWord(w){
+  if (memCacheGet(w)) return;
   if (STATE.wordPrefetchPending.has(w)) return;
   STATE.wordPrefetchPending.add(w);
-  const run = async()=>{
+  try{
+    const c = await dbGet('words', w);
+    if (c && c.data){ memCacheSet(w, c.data); return; }
+    if (!canStartPrefetch()) return;
+    STATE.wordPrefetchInflight.add(w);
     try{
-      const c = await dbGet('words', w);
-      if (c && c.data){
-        STATE.wordMemCache.set(w, c.data);
-        if(STATE.currentDoc){ STATE.currentDoc.wordData = STATE.currentDoc.wordData||{}; STATE.currentDoc.wordData[w] = c.data; }
-      }
-    }catch(e){}
-    finally{ STATE.wordPrefetchPending.delete(w); }
-  };
-  if ('requestIdleCallback' in window) requestIdleCallback(run, {timeout: 200});
-  else setTimeout(run, 0);
+      const prompt=`Return detailed info for the English word "${w}" in American English. JSON only:\n{"word":"${w}","pos":"noun|verb|adj|adv|prep|conj|pron|det|interj","ipa":"American IPA","meaningKo":"Korean meaning","morphKo":"Korean morpheme analysis","synonyms":["..."],"antonyms":["..."],"examples":[{"en":"...","ko":"..."},{"en":"...","ko":"..."}]}`;
+      const body={contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{temperature:0.3,maxOutputTokens:1024,responseMimeType:'application/json'}};
+      const res=await callGeminiDirect(body);
+      const txt=res?.candidates?.[0]?.content?.parts?.[0]?.text||'{}';
+      const data=safeJsonParse(txt,{});
+      if(!data || !data.word) data.word=w;
+      memCacheSet(w, data);
+      try{ await dbPut('words',{word:w,data,ts:Date.now()}); }catch(e){}
+      refreshOpenModalsFromCache();
+    } finally {
+      STATE.wordPrefetchInflight.delete(w);
+    }
+  } catch(e){} finally {
+    STATE.wordPrefetchPending.delete(w);
+  }
+}
+function prefetchPhrase(displayText, normKey, phraseHint){
+  const cacheKey = 'phrase::'+normKey;
+  if (memCacheGet(cacheKey)) return;
+  if (STATE.wordPrefetchPending.has(cacheKey)) return;
+  if (STATE.prefetchDebounce.has(cacheKey)) return;
+  const timer = setTimeout(()=>{
+    STATE.prefetchDebounce.delete(cacheKey);
+    doPrefetchPhrase(displayText, normKey, phraseHint);
+  }, PREFETCH_DEBOUNCE_MS);
+  STATE.prefetchDebounce.set(cacheKey, timer);
+}
+async function doPrefetchPhrase(displayText, normKey, phraseHint){
+  const cacheKey = 'phrase::'+normKey;
+  if (memCacheGet(cacheKey)) return;
+  if (STATE.wordPrefetchPending.has(cacheKey)) return;
+  STATE.wordPrefetchPending.add(cacheKey);
+  try{
+    const c = await dbGet('words', cacheKey);
+    if (c && c.data){ memCacheSet(cacheKey, c.data); return; }
+    if (!canStartPrefetch()) return;
+    STATE.wordPrefetchInflight.add(cacheKey);
+    try{
+      const typeHint = phraseHint?.type ? `Type hint: ${phraseHint.type}.` : '';
+      const meaningHint = phraseHint?.meaningKo ? `Known Korean meaning: ${phraseHint.meaningKo}.` : '';
+      const prompt=`Return detailed info for the English multi-word expression "${displayText}" in American English. ${typeHint} ${meaningHint}
+Treat it as ONE meaning unit.
+JSON only:
+{"word":"${displayText}","pos":"phrasal_verb|idiom|collocation|compound_noun|proper_noun|fixed_expression","ipa":"American IPA","meaningKo":"Korean meaning","morphKo":"구성 요소 분석","synonyms":["..."],"antonyms":["..."],"examples":[{"en":"...","ko":"..."},{"en":"...","ko":"..."}]}`;
+      const body={contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{temperature:0.3,maxOutputTokens:1536,responseMimeType:'application/json'}};
+      const res=await callGeminiDirect(body);
+      const txt=res?.candidates?.[0]?.content?.parts?.[0]?.text||'{}';
+      const data=safeJsonParse(txt,{});
+      if(!data || !data.word) data.word=displayText;
+      memCacheSet(cacheKey, data);
+      try{ await dbPut('words',{word:cacheKey,data,ts:Date.now()}); }catch(e){}
+      refreshOpenModalsFromCache();
+    } finally {
+      STATE.wordPrefetchInflight.delete(cacheKey);
+    }
+  } catch(e){} finally {
+    STATE.wordPrefetchPending.delete(cacheKey);
+  }
 }
 
+/* ---------- 모달 (낙관적 즉시 렌더링) ---------- */
 function openWordModal(word){
   word=normalizeWord(word); if(!word) return;
-  STATE.userActionActive=true;
-  const modal=createWordModal(word);
-  const memHit = STATE.wordMemCache.get(word) || (STATE.currentDoc && STATE.currentDoc.wordData && STATE.currentDoc.wordData[word]);
-  if(memHit){ renderWordModalContent(modal, memHit); return; }
-  modal.querySelector('.wm-body').innerHTML=`
-    <div class="wm-head"><span class="wm-word">${escapeHtml(word)}</span></div>
-    <div class="wm-loading"><div class="wm-spinner"></div>정보를 불러오는 중...</div>
-  `;
-  fetchAndRenderWord(word, modal);
+  markUserAction(8000);
+  STATE.warmupPaused = true;
+  const modal = createWordModal(word);
+  const cached = memCacheGet(word);
+  if (cached) {
+    renderWordModalContent(modal, cached);
+    modal.dataset.rendered = '1';
+    return;
+  }
+  renderWordModalSkeleton(modal, { word, pos:'' });
+  fetchWordDataAndUpdate(word, modal);
 }
-async function fetchAndRenderWord(word, modal){
+async function fetchWordDataAndUpdate(word, modal){
   try{
-    const c=await dbGet('words',word);
-    if(c && c.data){
-      STATE.wordMemCache.set(word, c.data);
-      if(STATE.currentDoc){ STATE.currentDoc.wordData=STATE.currentDoc.wordData||{}; STATE.currentDoc.wordData[word]=c.data; await dbPut('documents',STATE.currentDoc).catch(()=>{}); }
-      renderWordModalContent(modal,c.data); return;
+    const c = await dbGet('words', word);
+    if (c && c.data){
+      memCacheSet(word, c.data);
+      if (modal.isConnected) { renderWordModalContent(modal, c.data); modal.dataset.rendered='1'; }
+      return;
     }
   }catch(e){}
   try{
@@ -1554,36 +1755,38 @@ async function fetchAndRenderWord(word, modal){
     const txt=res?.candidates?.[0]?.content?.parts?.[0]?.text||'{}';
     const data=safeJsonParse(txt,{});
     if(!data || !data.word) data.word=word;
-    STATE.wordMemCache.set(word, data);
+    memCacheSet(word, data);
     try{ await dbPut('words',{word,data,ts:Date.now()}); }catch(e){}
-    if(STATE.currentDoc){ STATE.currentDoc.wordData=STATE.currentDoc.wordData||{}; STATE.currentDoc.wordData[word]=data; await dbPut('documents',STATE.currentDoc).catch(()=>{}); }
-    renderWordModalContent(modal,data);
-  }catch(e){ modal.querySelector('.wm-body').innerHTML=`<div class="wm-loading">불러오기 실패: ${escapeHtml(e.message)}</div>`; }
+    if (modal.isConnected) { renderWordModalContent(modal, data); modal.dataset.rendered='1'; }
+  }catch(e){
+    if (modal.isConnected) {
+      const body = modal.querySelector('.wm-body');
+      if (body) body.innerHTML = `<div class="wm-loading">불러오기 실패: ${escapeHtml(e.message)}</div>`;
+    }
+  }
 }
 
-/* ---------- Phrase modal (다단어 표현 단어창) ---------- */
 function openPhraseModal(displayText, normKey, phraseHint){
-  STATE.userActionActive=true;
-  const modal=createWordModal(displayText);
+  markUserAction(8000);
+  STATE.warmupPaused = true;
   const cacheKey = 'phrase::'+normKey;
-  const memHit = STATE.wordMemCache.get(cacheKey);
-  if(memHit){ renderWordModalContent(modal, memHit); return; }
-  modal.querySelector('.wm-body').innerHTML=`
-    <div class="wm-head">
-      <span class="wm-word">${escapeHtml(displayText)}</span>
-      <span class="wm-pos">${escapeHtml(POS_KR[phraseHint?.type]||'표현')}</span>
-    </div>
-    <div class="wm-loading"><div class="wm-spinner"></div>표현 정보를 불러오는 중...</div>
-  `;
-  fetchAndRenderPhrase(displayText, normKey, phraseHint, modal);
+  const modal = createWordModal(cacheKey);
+  const cached = memCacheGet(cacheKey);
+  if (cached) {
+    renderWordModalContent(modal, cached);
+    modal.dataset.rendered = '1';
+    return;
+  }
+  renderWordModalSkeleton(modal, { word: displayText, pos: POS_KR[phraseHint?.type]||'표현', meaningHint: phraseHint?.meaningKo });
+  fetchPhraseDataAndUpdate(displayText, normKey, phraseHint, modal);
 }
-async function fetchAndRenderPhrase(displayText, normKey, phraseHint, modal){
+async function fetchPhraseDataAndUpdate(displayText, normKey, phraseHint, modal){
   const cacheKey = 'phrase::'+normKey;
   try{
     const c=await dbGet('words', cacheKey);
     if(c && c.data){
-      STATE.wordMemCache.set(cacheKey, c.data);
-      renderWordModalContent(modal, c.data);
+      memCacheSet(cacheKey, c.data);
+      if (modal.isConnected) { renderWordModalContent(modal, c.data); modal.dataset.rendered='1'; }
       return;
     }
   }catch(e){}
@@ -1598,7 +1801,7 @@ JSON only:
   "pos":"phrasal_verb|idiom|collocation|compound_noun|proper_noun|fixed_expression",
   "ipa":"American IPA for the whole phrase, reflecting connected speech (linking, reduction, stress pattern)",
   "meaningKo":"Korean meaning of the whole phrase as a unit",
-  "morphKo":"구성 요소 분석 - 각 구성어가 어떻게 결합하여 전체 의미를 만드는지 한국어로 설명. 직역과 실제 의미의 차이도 언급",
+  "morphKo":"구성 요소 분석 - 각 구성어가 어떻게 결합하여 전체 의미를 만드는지 한국어로 설명",
   "synonyms":["alternative phrases or single-word equivalents"],
   "antonyms":["opposite phrases if applicable"],
   "examples":[
@@ -1611,18 +1814,49 @@ JSON only:
     const txt=res?.candidates?.[0]?.content?.parts?.[0]?.text||'{}';
     const data=safeJsonParse(txt,{});
     if(!data || !data.word) data.word=displayText;
-    STATE.wordMemCache.set(cacheKey, data);
+    memCacheSet(cacheKey, data);
     try{ await dbPut('words',{word:cacheKey,data,ts:Date.now()}); }catch(e){}
-    renderWordModalContent(modal, data);
-  }catch(e){ modal.querySelector('.wm-body').innerHTML=`<div class="wm-loading">불러오기 실패: ${escapeHtml(e.message)}</div>`; }
+    if (modal.isConnected) { renderWordModalContent(modal, data); modal.dataset.rendered='1'; }
+  }catch(e){
+    if (modal.isConnected) {
+      const body = modal.querySelector('.wm-body');
+      if (body) body.innerHTML = `<div class="wm-loading">불러오기 실패: ${escapeHtml(e.message)}</div>`;
+    }
+  }
 }
 
-function createWordModal(word){
+function renderWordModalSkeleton(modal, { word, pos, meaningHint }){
+  const body = modal.querySelector('.wm-body');
+  body.innerHTML = `
+    <div class="wm-head">
+      <span class="wm-word">${escapeHtml(word)}</span>
+      ${pos?`<span class="wm-pos">${escapeHtml(pos)}</span>`:''}
+      <button class="wm-play"><svg viewBox="0 0 24 24"><polygon points="6 4 20 12 6 20 6 4"/></svg></button>
+    </div>
+    <div class="wm-section">
+      <div class="wm-label">의미</div>
+      ${meaningHint
+        ? `<div class="wm-meaning">${escapeHtml(meaningHint)}</div>`
+        : `<div class="wm-skel wm-skel-line w90"></div><div class="wm-skel wm-skel-line w70"></div>`}
+    </div>
+    <div class="wm-section">
+      <div class="wm-label">예문</div>
+      <div class="wm-skel wm-skel-block"></div>
+      <div class="wm-skel wm-skel-block"></div>
+    </div>
+  `;
+  body.querySelector('.wm-play')?.addEventListener('click',e=>{
+    const b=e.currentTarget; speak(word,{btn:b});
+  });
+}
+
+function createWordModal(cacheKey){
   ensureWmOverlay();
   const stack=$('#wmStack'); stack.classList.add('show');
   const overlay=$('#wmOverlay'); overlay.classList.add('show');
   const modal=document.createElement('div');
   modal.className='wmodal';
+  if (cacheKey) modal.dataset.cacheKey = cacheKey;
   const depth=STATE.wmStack.length;
   modal.style.top=(60+depth*24)+'px';
   modal.style.zIndex=(320+depth);
@@ -1642,12 +1876,18 @@ function ensureWmOverlay(){
 function popWordModal(){
   const m=STATE.wmStack.pop();
   if(m) m.remove();
-  if(STATE.wmStack.length===0){ $('#wmOverlay').classList.remove('show'); $('#wmStack').classList.remove('show'); STATE.userActionActive=false; }
+  if(STATE.wmStack.length===0){
+    $('#wmOverlay').classList.remove('show');
+    $('#wmStack').classList.remove('show');
+    clearUserAction();
+    STATE.warmupPaused = false;
+  }
 }
 function closeAllWordModals(){
   while(STATE.wmStack.length>0){ const m=STATE.wmStack.pop(); m.remove(); }
   $('#wmOverlay').classList.remove('show'); $('#wmStack').classList.remove('show');
-  STATE.userActionActive=false;
+  clearUserAction();
+  STATE.warmupPaused = false;
 }
 function renderWordModalContent(modal, d){
   const body=modal.querySelector('.wm-body');
@@ -1683,7 +1923,7 @@ function renderWordModalContent(modal, d){
 async function handleKoreanAnalyze(){
   const text=$('#koreanText')?.value?.trim();
   if(!text){ toast('한국어 문장을 입력하세요'); return; }
-  STATE.userActionActive=true;
+  markUserAction(10000);
   showProgress(50,'영어로 번역 중...');
   try{
     const prompt=`Translate the Korean text to natural American English. Use US vocabulary and idioms. No slang. Return JSON only: {"english":"natural American English translation","literal":"literal English","words":["key","words"]}\n\nKorean: ${text}`;
@@ -1698,7 +1938,7 @@ async function handleKoreanAnalyze(){
       await analyzeText(data.english,{sourceType:'korean',title:titleFromText(data.english)});
     }
   }catch(e){ hideProgress(); toast('번역 실패: '+e.message); }
-  finally{ STATE.userActionActive=false; }
+  finally{ clearUserAction(); }
 }
 function renderKoreanResult(korean, data){
   const r=$('#koreanResult'); if(!r) return;
@@ -1716,7 +1956,7 @@ function renderKoreanResult(korean, data){
 async function handleKoreanAudio(file){
   if(!file) return;
   showProgress(30,'음성 인식 중...');
-  STATE.userActionActive=true;
+  markUserAction(15000);
   try{
     const b64=await fileToBase64(file);
     const prompt=`Transcribe this Korean audio. Return JSON only: {"text":"Korean transcription"}`;
@@ -1728,13 +1968,12 @@ async function handleKoreanAudio(file){
     if(data.text){ $('#koreanText').value=data.text; toast('인식 완료'); }
     else toast('인식 결과 없음');
   }catch(e){ hideProgress(); toast('음성 인식 실패: '+e.message); }
-  finally{ STATE.userActionActive=false; }
+  finally{ clearUserAction(); }
 }
 function fileToBase64(file){
   return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>{ const s=r.result; const i=s.indexOf(','); res(i>=0?s.slice(i+1):s); }; r.onerror=rej; r.readAsDataURL(file); });
 }
 
-/* ---------- Recording ---------- */
 async function startRecording(){
   try{
     const stream=await navigator.mediaDevices.getUserMedia({audio:true});
@@ -1830,6 +2069,7 @@ async function openDocument(id){
   STATE.sentences=doc.sentences||[];
   STATE.ytSegments=doc.segments||[]; STATE.currentVideoId=doc.videoId||null;
   STATE.sourceType=doc.sourceType||'text';
+  if(doc.wordData){ for(const [k,v] of Object.entries(doc.wordData)){ STATE.wordMemCache.set(k,v); } }
   if(doc.videoId && doc.segments?.length) await initYouTubePlayer(doc.videoId);
   const container=$('#sentenceList'); if(container) container.innerHTML='';
   STATE.sentences.forEach(s=>renderSentenceBlock(s));
@@ -1954,7 +2194,7 @@ async function handleGenerate(){
   if(!topic){ toast('주제를 입력하세요'); return; }
   const grade=STATE.genGrade, style=STATE.genStyle, fmt=STATE.genFormat, words=STATE.genWords;
   closeGenModal();
-  STATE.userActionActive=true;
+  markUserAction(20000);
   showProgress(20,'문장 생성 중...');
   try{
     const gradeDesc=getGradeDesc(grade);
@@ -1966,7 +2206,7 @@ async function handleGenerate(){
     STATE.currentRawFile=null;
     await analyzeText(text,{sourceType:'generated',title:titleFromText(topic)+` (G${grade})`});
   }catch(e){ hideProgress(); toast('생성 실패: '+e.message); }
-  finally{ STATE.userActionActive=false; }
+  finally{ clearUserAction(); }
 }
 function getGradeDesc(g){
   if(g==='K') return 'Kindergarten, very simple vocabulary, short sentences';
@@ -2099,7 +2339,7 @@ function setFontSize(v){
   localStorage.setItem('ts_font',v);
 }
 
-/* ---------- Word cache preload ---------- */
+/* ---------- Word cache preload (메모리 캐시 단일 진실원) ---------- */
 async function preloadWordCache(){
   try{
     const all = await dbAll('words');
@@ -2115,11 +2355,9 @@ async function init(){
   const sp=Number(localStorage.getItem('ts_speed'))||1.0;
   STATE.speed=sp;
 
-
   $$('#speedGroup .opt-chip').forEach(b=>b.classList.toggle('active', Number(b.dataset.speed)===sp));
   const gd=localStorage.getItem('ts_gender')||'female';
   STATE.gender=gd;
-
 
   $$('#genderGroup .opt-chip').forEach(b=>b.classList.toggle('active', b.dataset.gender===gd));
   const vc=localStorage.getItem('ts_voiceChar')||'natural1';
@@ -2129,12 +2367,14 @@ async function init(){
   bindUI();
 
   try{ STATE.db=await openDB(); }catch(e){ console.error('DB open failed',e); }
+
+  // 단어 캐시를 가장 먼저 메모리로 로드 (탭 즉시 응답을 위해)
+  await preloadWordCache();
+
   try{ await fetch('/api/health').catch(()=>{}); }catch(e){}
   await loadVoices();
   buildVoiceCatalog();
   renderVoiceCharGroup();
-
-  await preloadWordCache();
 
   try{ const u=new SpeechSynthesisUtterance(' '); u.volume=0; speechSynthesis.speak(u); }catch(e){}
 

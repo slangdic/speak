@@ -154,10 +154,10 @@ input:focus,textarea:focus{outline:none}
 .opt-chip{padding:6px 12px;border-radius:18px;background:var(--card);border:1.5px solid var(--line);font-size:.85rem;color:var(--ink-soft);font-weight:500}
 .opt-chip.active{background:var(--sage);color:#fff;border-color:var(--sage)}
 .opt-chip.disabled{opacity:.4;pointer-events:none}
-.voice-chip{display:flex;flex-direction:column;align-items:flex-start;padding:8px 12px;border-radius:12px;background:var(--card);border:1.5px solid var(--line);min-width:0;flex:1 1 calc(33% - 6px);text-align:left;gap:2px}
+.voice-chip{display:flex;flex-direction:column;align-items:flex-start;padding:8px 12px;border-radius:12px;background:var(--card);border:1.5px solid var(--line);min-width:0;flex:1 1 calc(33% - 6px);text-align:left;gap:2px;overflow:hidden}
 .voice-chip.active{background:var(--sage);color:#fff;border-color:var(--sage)}
-.voice-chip .vc-name{font-weight:600;font-size:.85rem;line-height:1.2}
-.voice-chip .vc-desc{font-size:.7rem;opacity:.75;line-height:1.2}
+.voice-chip .vc-name{font-weight:600;font-size:.85rem;line-height:1.2;width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.voice-chip .vc-desc{font-size:.7rem;opacity:.75;line-height:1.2;width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .font-size-row{display:flex;align-items:center;gap:10px;margin-top:6px}
 .font-size-row button{width:36px;height:36px;border-radius:10px;background:var(--card);border:1px solid var(--line);font-size:1rem;font-weight:700}
 .font-size-row span{min-width:50px;text-align:center;font-weight:600}
@@ -436,9 +436,9 @@ input:focus,textarea:focus{outline:none}
     <div class="scrub-wrap">
       <button class="scrub-arrow" id="scrubLeft"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></button>
       <div class="scrub-track" id="scrubTrack">
-        <div class="scrub-val side" id="scrubL">800</div>
+        <div class="scrub-val side" id="scrubL">900</div>
         <div class="scrub-val center" id="scrubC">1000</div>
-        <div class="scrub-val side" id="scrubR">1200</div>
+        <div class="scrub-val side" id="scrubR">1100</div>
       </div>
       <button class="scrub-arrow" id="scrubRight"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></button>
     </div>
@@ -2292,8 +2292,8 @@ function buildScrubber(){
   track.ontouchstart=onDown; track.ontouchmove=onMove; track.ontouchend=onUp;
 }
 function stepScrub(dir){
-  const next=STATE.genWords + dir*200;
-  if(next<200||next>2000) return;
+  const next=STATE.genWords + dir*100;
+  if(next<100||next>2000) return;
   STATE.genWords=next;
   updateScrubberDisplay();
   if(navigator.vibrate) try{ navigator.vibrate(8); }catch(e){}
@@ -2301,9 +2301,9 @@ function stepScrub(dir){
 function updateScrubberDisplay(){
   const c=STATE.genWords;
   $('#scrubC').textContent=c;
-  $('#scrubL').textContent=c-200>=200?c-200:'';
-  $('#scrubR').textContent=c+200<=2000?c+200:'';
-  $('#scrubLeft').disabled=(c<=200);
+  $('#scrubL').textContent=c-100>=100?c-100:'';
+  $('#scrubR').textContent=c+100<=2000?c+100:'';
+  $('#scrubLeft').disabled=(c<=100);
   $('#scrubRight').disabled=(c>=2000);
 }
 async function handleGenerate(){
